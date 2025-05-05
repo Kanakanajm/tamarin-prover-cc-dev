@@ -2,13 +2,6 @@ import dotString from "./example.dot?raw";
 import { instance } from "@viz-js/viz";
 import * as d3 from "d3";
 
-function transform(matrix: SVGMatrix, point: { x: number; y: number }) {
-  const x = matrix.a * point.x + matrix.c * point.y + matrix.e;
-  const y = matrix.b * point.x + matrix.d * point.y + matrix.f;
-  return { x, y };
-}
-
-
 instance().then(viz => {
   document.getElementById("app")?.appendChild(viz.renderSVGElement(dotString, {
   }));
