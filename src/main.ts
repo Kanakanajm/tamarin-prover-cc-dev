@@ -2,6 +2,8 @@ import dotString from "./example.dot?raw";
 import { instance } from "@viz-js/viz";
 import * as d3 from "d3";
 
+const ZOOM_ON_CENTROID_ONLY = true;
+
 instance().then(viz => {
   document.getElementById("app")?.appendChild(viz.renderSVGElement(dotString, {
   }));
@@ -69,8 +71,14 @@ instance().then(viz => {
   // .attr("cy",  p.y)
   // .attr("r", 5)
   // .attr("fill", "blue")
+  if (ZOOM_ON_CENTROID_ONLY) {
+    graph.attr("transform", `translate(${tx} ${ty}) translate(${cx} ${cy}) scale(${event.transform.k}) translate(${-cx} ${-cy})`);
 
+  }else {
     graph.attr("transform", `translate(${tx} ${ty}) translate(${cursorpt.x} ${cursorpt.y}) scale(${event.transform.k}) translate(${-cursorpt.x} ${-cursorpt.y})`);
+
+  }
+
   });
   
   svg.call(graphZoomBehavior);
