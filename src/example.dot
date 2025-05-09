@@ -26,7 +26,7 @@ xsimple&gt; )]}}",
 	n11	[fillcolor="#c3da98",
 		fontcolor=black,
 		label="{{<n6> ReceiverKeyComplicated( KE1 )|<n7> In( SE1 )|<n8> ReceiverKeySimple( keysimple )|<n9> In( SE3 )}|{<n10> #j : receive[Unique( &lt;\
-XC1, xsimple&get; )]}}",
+XC1, xsimple&gt; )]}}",
 		role=Undefined,
 		shape=record,
 		style=filled];
