@@ -1,9 +1,13 @@
 import dotString from "./example.dot?raw";
 import { instance } from "@viz-js/viz";
 import * as d3 from "d3";
-import { ActionText, calculateCentroid, calculateEllipseRadii, lengthSqured, Ellipse, getCubicBezierCurve, getCubicBezierCurveGradients, intersect, minus, normalize, parseEdgeTitle, Ray, sub, traverse, Vec2 } from "./helper";
+import { extendCurvePath, getCubicBezierCurve, getCubicBezierCurveGradients } from "./path";
+import { calculateCentroid, calculateEllipseRadii, cross, direction, dot, Ellipse, intersect, inv, print2f, project, Ray, sub, traverse, Vec2 } from "./math";
 
 const ZOOM_LEVEL_THRESHOLD = 0.99;
+const ARROW_HEAD_WIDTH = 7;
+const ARROW_HEAD_HEIGHT = 10;
+const ARROW_HEAD_HALF_WIDTH = ARROW_HEAD_WIDTH / 2;
 type ZoomLevel = "ZoomIn" | "ZoomOut";
 
 // scale = 1 > 0.8 => ZoomIn
@@ -15,6 +19,11 @@ let removedEdges: SVGGElement[] = [];
 
 let graphJson: any;
 let edgesToReroute: any[] = [];
+
+export interface ActionText {
+  text: string | null;
+  bb: DOMRect | null;
+}
 
 function popRecords() {
   return d3.selectAll<SVGGElement, unknown>(".node.record").remove().nodes();
@@ -39,7 +48,12 @@ function restoreRemoved() {
   d3.select<SVGGElement, unknown>(".graph").node()?.append(...removedEdges);
 }
 
-function getEllipse(selection: d3.Selection<SVGEllipseElement, unknown, HTMLElement, any>): Ellipse {
+/**
+ * 
+ * @param selection the d3 selection of an \<ellipse\> element
+ * @returns an Ellipse object constructed from the selection
+ */
+export function asEllipse(selection: d3.Selection<SVGEllipseElement, any, HTMLElement, any>): Ellipse {
   return {
     c: {
       x: Number(selection.attr("cx")),
@@ -49,6 +63,7 @@ function getEllipse(selection: d3.Selection<SVGEllipseElement, unknown, HTMLElem
     ry: Number(selection.attr("ry"))
   }
 }
+
 
 function getPolygonFillColor(g: SVGGElement): string {
   return d3.select(g).selectChild("polygon").attr("fill");
@@ -77,114 +92,137 @@ function getTitleText(g: SVGGElement): string {
   return d3.select<SVGGElement, unknown>(g).selectChild<SVGTitleElement>("title").text();
 }
 
-function constructNewPath(path: string, start: Vec2, end: Vec2): string {
-  const cIndex = path.indexOf("C");
-  if (cIndex === -1) {
-    // no curve, return the original path
-    console.error("No curve found in the path, cannot construct new path");
-    return path;
-  }
-  return `M${start.x.toFixed(2)},${start.y.toFixed(2)}${path.slice(cIndex)}L${end.x.toFixed(2)},${end.y.toFixed(2)}`;
-}
-
-function getArrowHeadPoints(pointStr: string): Vec2[] {
-  return pointStr.split(" ").map(pair => {
-    const [xStr, yStr] = pair.split(",");
-    return { x: parseFloat(xStr), y: parseFloat(yStr) };
-  });
-}
-
-function getArrowHeadHeight(poiontStr: string): number {
-  const points = getArrowHeadPoints(poiontStr);
-  if (points.length < 3) {
-    console.error("Not enough points to calculate arrow head height");
-    return 0;
-  }
-  // calculate the height as the distance between the first and last point
-  return Math.sqrt(lengthSqured(sub(points[0], points[1])) - 0.25 * lengthSqured(sub(points[0], points[2])));
-}
-
 function appendNewEdges() {
   const graph = d3.select<SVGGElement, unknown>(".graph");
   for (const edge of edgesToReroute) {
-
     const oldEdge = getGWithTitle(edge.title);
+    const oldEdgePath = oldEdge.selectChild<SVGPathElement>("path");
+    const oldEdgePolygon = oldEdge.selectChild<SVGPathElement>("polygon");
+    const edgeStrokeWidth = oldEdgePolygon.attr("stroke-width") === null ? 1 : Number(oldEdgePolygon.attr("stroke-width"));
+    const arrowHeadTipOffset = Math.sqrt(ARROW_HEAD_HALF_WIDTH * ARROW_HEAD_HALF_WIDTH + ARROW_HEAD_HEIGHT * ARROW_HEAD_HEIGHT) / ARROW_HEAD_HALF_WIDTH * (edgeStrokeWidth / 2);
+    const arrowHeadRealHeight = ARROW_HEAD_HEIGHT + arrowHeadTipOffset + edgeStrokeWidth / 2;
+
+    // the node where the edge starts from
+    // Note that the nodes on the DOM right now are either mini-record or ellipse, since we've removed record
+    const fromNode = getGWithTitle<SVGGElement>(edge.tailName);
+    const fromEllipse = asEllipse(fromNode
+      .selectChild<SVGEllipseElement>("ellipse"));
+
+    // the node where the edge ends at
+    const toNode = getGWithTitle<SVGGElement>(edge.headName);
+    const toEllipse = asEllipse(toNode
+      .selectChild<SVGEllipseElement>("ellipse"));
+
+    if (fromNode.empty() || toNode.empty()) {
+      console.error(`Can't find terminal nodes for edge ${edge.title} that starts at ${edge.tailName} and ends at ${edge.headName}`);
+      throw new Error("Edge's start/end node missing");
+    }
 
     const g = graph.append("g")
       .attr("id", oldEdge.attr("id"))
       .attr("class", "edge new-edge");
 
-    g.append("title");
+    g.append("title"); // need to be completed with same title as the old one
+    console.log(fromNode.node());
+    const shouldRerouteTail = Boolean(fromNode.attr("class")?.includes("mini-record"));
+    const shouldRerouteHead = Boolean(toNode.attr("class")?.includes("mini-record"));
 
-    const fromNode = getGWithTitle(edge.tailName);
-    const toNode = getGWithTitle(edge.headName);
-    if (fromNode.empty() || toNode.empty()) {
-      console.error(`Node with title ${edge.tailName} or ${edge.headName} not found`);
-      return;
+    let edgePath: string = oldEdgePath.attr("d");
+    const oldCurve = getCubicBezierCurve(edgePath);
+    const [oldTailGrad, oldHeadGrad] = getCubicBezierCurveGradients(oldCurve);
+    let isTailReprojected = false;
+    if (shouldRerouteTail) {
+      // start from the starting point of the curve and in direction of the negative gradient
+      // opposite of the (arrow) path's direction
+      const tailRay: Ray = {
+        o: oldCurve.start,
+        d: inv(oldTailGrad)
+      };
+
+      // intersection to the from-ellipse by extending the tail ray
+      const tailIts = intersect(tailRay, fromEllipse);
+
+      if (tailIts) {
+        edgePath = extendCurvePath(edgePath, traverse(tailRay, tailIts));
+      }
+      else {
+        isTailReprojected = true;
+        const tailProj = project(oldCurve.start, fromEllipse);
+        edgePath = `M${print2f(tailProj)}L${print2f(oldCurve.end)}`;
+      }
     }
 
-    const fromEllipseSelection = fromNode
-      .selectChild<SVGEllipseElement>("ellipse");
-    const toEllipseSelection = toNode
-      .selectChild<SVGEllipseElement>("ellipse");
+    if (shouldRerouteHead) {
+      const headRay: Ray = {
+        o: oldCurve.end,
+        d: oldHeadGrad
+      };
 
-    const fromEllipse = getEllipse(fromEllipseSelection);
-    const toEllipse = getEllipse(toEllipseSelection);
+      const headIts = intersect(headRay, toEllipse);
+      let headItsPoint: Vec2;
+      let headDirection: Vec2;
+      if (headIts) {
+        // has to consider the offset of the arrow head
+        edgePath = extendCurvePath(edgePath, undefined, traverse(headRay, headIts - arrowHeadRealHeight));
+        headItsPoint = traverse(headRay, headIts);
+        headDirection = inv(headRay.d);
 
+      }
+      else {
+        const headProj = project(oldCurve.end, toEllipse);
+        headItsPoint = headProj;
 
-    const oldEdgePath = oldEdge.selectChild<SVGPathElement>("path");
-    const oldEdgePolygon = oldEdge.selectChild<SVGPathElement>("polygon");
-    const oldCurve = getCubicBezierCurve(oldEdgePath.attr("d"));
-    const [oldStartGrad, oldEndGrad] = getCubicBezierCurveGradients(oldCurve);
+        if (isTailReprojected) {
+          throw new Error("Not implemented yet")
+        } else {
+          const projHeadRay: Ray = {
+            o: headProj,
+            d: direction(headProj, oldCurve.start)
+          }
+          edgePath = `M${print2f(oldCurve.start)}L${print2f(traverse(projHeadRay, arrowHeadRealHeight))}`;
+          headDirection = projHeadRay.d;
+          console.log(headDirection, cross({ x: 0, y: -1 }, headDirection));
+        }
 
-    // start from the starting point of the curve and in direction of the negative gradient
-    // opposite of the (arrow) path's direction
-    const startRay: Ray = {
-      o: oldCurve.start,
-      d: minus(oldStartGrad)
-    };
+      }
+      // add new arrow head
 
-    const itsStart = intersect(startRay, fromEllipse);
+      // We obtain the angle between the end segment and vector (0, -1) (since SVG's rotation transform is defined as an angle of the angle from direction (0, -1) in clockwise manner) by taking the dot product of the inverse of the end ray's direction and vector (0, -1). The inversion (-endRay.d) is because we want the end segment's direction to point out so that it is comparable with the vector (0, -1) which is also pointing out. Math.acos(x) gives the result in radian so we have to convert it back to degree. Finally, the angle we calculated needed to be inverted (counter-clockwise) 
 
-    const endRay: Ray = {
-      o: oldCurve.end,
-      d: oldEndGrad
-    };
-
-    const itsEnd = intersect(endRay, toEllipse);
-
-    if (!itsStart || !itsEnd) {
-      console.error("The rays didn't intersect! What?");
-      continue;
+      const rotation = (cross({ x: 0, y: -1 }, headDirection) > 0 ? 1 : -1) * Math.acos(dot(headDirection, { x: 0, y: -1 })) * 180 / Math.PI;
+      /**
+      * Arrow Head Creation
+      * Arrow heads created by graphviz have a width of 7 and a height of 10.
+      * After edge re-route i.e. the start and end points get extended to their from and to-nodes respectively, the arrow heads (which are typically at the end points of the edges) must be re-created as well.
+      * The arrow head triangle is first created as an upside down triangle with the tip pointing down and the base paralleling with the x-axis i.e. as ▼
+      * The arrow head is then rotated to be aligned with the end point's gradient direction i.e. to be aligned with the last / end segment of the edge.
+      */
+      const arrowHeadTipPoint = sub(headItsPoint, { x: 0, y: arrowHeadTipOffset });
+      const arrowHeadRightPoint = sub(arrowHeadTipPoint, { x: -ARROW_HEAD_HALF_WIDTH, y: ARROW_HEAD_HEIGHT });
+      const arrowHeadLeftPoint = sub(arrowHeadTipPoint, { x: ARROW_HEAD_HALF_WIDTH, y: ARROW_HEAD_HEIGHT });
+      g.append("path")
+        .attr("d", `M${print2f(arrowHeadLeftPoint)}L${print2f(arrowHeadTipPoint)}L${print2f(arrowHeadRightPoint)}Z`)
+        .attr("fill", oldEdgePolygon.attr("fill"))
+        .attr("stroke", oldEdgePolygon.attr("stroke"))
+        .attr("stroke-width", oldEdgePolygon.attr("stroke-width"))
+        .attr("transform", `rotate(${rotation},${print2f(headItsPoint)})`);
+    }
+    else {
+      // keep the old arrow head
+      g.append("polygon")
+        .attr("points", oldEdgePolygon.attr("points"))
+        .attr("fill", oldEdgePolygon.attr("fill"))
+        .attr("stroke", oldEdgePolygon.attr("stroke"))
+        .attr("stroke-width", oldEdgePolygon.attr("stroke-width"));
     }
 
-    // const arrowHeadLength = getArrowHeadHeight(oldEdgePolygon.attr("points")); 
-    const arrowHeadLength = 12.5;
-    const newStart = traverse(startRay, itsStart);
-    const newEnd = traverse(endRay, itsEnd - arrowHeadLength);
-
-    // translation for the arrow head along the ray
-    const delta = sub(newEnd, oldCurve.end);
     g.append("path")
-      .attr("d", constructNewPath(oldEdgePath.attr("d"), newStart, newEnd))
+      .attr("d", edgePath)
       .attr("fill", oldEdgePath.attr("fill"))
       .attr("stroke", oldEdgePath.attr("stroke"))
       .attr("stroke-width", oldEdgePath.attr("stroke-width"))
-      .attr("stroke-dasharray", oldEdgePath.attr("stroke-dasharray"))
-
-    g.append("polygon")
-      .attr("points", oldEdgePolygon.attr("points"))
-      .attr("fill", oldEdgePolygon.attr("fill"))
-      .attr("stroke", oldEdgePolygon.attr("stroke"))
-      .attr("stroke-width", oldEdgePolygon.attr("stroke-width"))
-      .attr("transform", `translate(${delta.x}, ${delta.y})`);
-
+      .attr("stroke-dasharray", oldEdgePath.attr("stroke-dasharray"));
   }
-
-
-
-
-
 }
 
 
@@ -241,17 +279,19 @@ function handleZoomOut() {
 
   // first time zoom out, removedNodes is empty
   appendMiniRecords();
-  appendNewEdges();
   removedNodes = popRecords();
+
+  appendNewEdges();
   removedEdges = popEdges();
+
 
 }
 
-function getGWithTitle(title: string) {
+function getGWithTitle<PElement extends d3.BaseType>(title: string) {
   return d3.selectAll<SVGTitleElement, unknown>("title").filter(function (this) {
     return d3.select(this).text() === title;
-  }).select(function (this) {
-    return this.parentElement;
+  }).select<PElement>(function (this: SVGTitleElement) {
+    return this.parentElement as PElement;
   });
 }
 
@@ -281,15 +321,17 @@ function getRerouteRequiredEdges() {
     title: constructEdgeTitle(edge)
   }));
 }
+
+
 instance().then(viz => {
   // render the dot graph as svg
   document.getElementById("app")?.appendChild(
     viz.renderSVGElement(dotString));
 
   graphJson = viz.renderJSON(dotString);
-  console.log(graphJson);
+  console.debug(graphJson);
   edgesToReroute = getRerouteRequiredEdges();
-  console.log(edgesToReroute);
+  console.debug(edgesToReroute);
 
   // the initial translation matrix of 
   const translate = d3.select<SVGGElement, unknown>("g")
@@ -320,7 +362,3 @@ instance().then(viz => {
 
     }));
 });
-
-function lengthSquredsub(arg0: Vec2, arg1: Vec2): number {
-  throw new Error("Function not implemented.");
-}
