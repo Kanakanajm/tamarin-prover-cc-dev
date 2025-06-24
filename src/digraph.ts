@@ -1,7 +1,5 @@
 import { findGElementIdByTitle } from "./dom"
 import { VizGraph } from "./viz"
-import { Selection } from "d3"
-
 
 interface DiEdge {
     elementId?: string,
@@ -13,6 +11,13 @@ interface DiEdge {
     toPort?: string
 }
 
+interface DiNode {
+    title: string,
+    elementId?: string,
+    minimizable: boolean
+}
+
+
 type NodeDict = { [key: string]: DiNode };
 type EdgeDict = { [key: string]: DiEdge };
 
@@ -20,11 +25,6 @@ type EdgeDict = { [key: string]: DiEdge };
 type AdjMatrix = { [key: string]: AdjMatrixRow };
 type AdjMatrixRow = { [key: string]: string | null };
 
-interface DiNode {
-    title: string,
-    elementId?: string,
-    minimizable: boolean
-}
 
 export interface DiGraphConnections {
     nodes: string[],
@@ -40,6 +40,7 @@ export class DiGraph {
     nodes: NodeDict;
     edges: EdgeDict;
     adj: AdjMatrix;
+    // abbrev?: { [key: string]: string[] };
 
     // table uses elementId as key to lookup (node/edge)Id
     reverseLookup: {

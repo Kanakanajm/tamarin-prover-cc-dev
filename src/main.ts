@@ -174,6 +174,7 @@ export class DotGraphViz extends HTMLElement {
     }
 
   };
+
   minimizeNode = (g: SVGGElement): SVGGElement => {
     const center = calculateCentroid(g.getBBox());
     const actionText = getActionText(g);
@@ -381,6 +382,13 @@ export class DotGraphViz extends HTMLElement {
 
     this.highlight();
   };
+
+  handleAbbrevationTextClick = (event: MouseEvent) => {
+    // this doesn't work here, use event.target/event.currentTarget
+    // this.highlightConnections.nodes = this.graph.getAbbrevationNodes()
+    // this.highlightConnections.edges = {};
+    // this.highlight();
+  }
 
   highlight = () => {
     if (!this.graph || !this.svgg || !this.highlightConnections)
