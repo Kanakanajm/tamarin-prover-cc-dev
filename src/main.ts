@@ -379,15 +379,14 @@ export class DotGraphViz extends HTMLElement {
     const nodeElementId = d3.select(event.currentTarget as HTMLElement).attr("id");
     this.highlightConnections = this.graph.getConnections(this.graph.reverseLookup.nodes[nodeElementId]);
 
-    // clear highlight
-    this.clearHighlight();
-
     this.highlight();
   };
 
   highlight = () => {
     if (!this.graph || !this.svgg || !this.highlightConnections)
       return;
+    // clear highlight
+    this.clearHighlight();
 
     // add new highlight
     d3.select(this.svgg).classed("highlighted", true);
