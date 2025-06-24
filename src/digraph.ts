@@ -26,7 +26,7 @@ interface DiNode {
     minimizable: boolean
 }
 
-interface DiGraphConnections {
+export interface DiGraphConnections {
     nodes: string[],
     edges: string[]
 }
@@ -40,6 +40,15 @@ export class DiGraph {
     nodes: NodeDict;
     edges: EdgeDict;
     adj: AdjMatrix;
+
+    // table uses elementId as key to lookup (node/edge)Id
+    reverseLookup: {
+        nodes: { [key: string]: string },
+        edges: { [key: string]: string }
+    } = {
+            nodes: {},
+            edges: {}
+        }
 
     constructor(vizGraph: VizGraph, svg: SVGSVGElement) {
 
@@ -101,9 +110,13 @@ export class DiGraph {
         this.nodes = Object.keys(this.nodes).reduce(
             (acc, curKey) => {
                 const n = this.nodes[curKey];
+                const elementId = findGElementIdByTitle(svg, n.title);
                 acc[curKey] = {
                     ...n,
-                    elementId: findGElementIdByTitle(svg, n.title)
+                    elementId
+                };
+                if (elementId) {
+                    this.reverseLookup.nodes[elementId] = curKey
                 }
                 return acc;
             }, {} as NodeDict
@@ -112,16 +125,20 @@ export class DiGraph {
         this.edges = Object.keys(this.edges).reduce(
             (acc, curKey) => {
                 const e = this.edges[curKey];
+                const elementId = findGElementIdByTitle(svg, e.title);
                 acc[curKey] = {
                     ...e,
-                    elementId: findGElementIdByTitle(svg, e.title)
+                    elementId
+                }
+                if (elementId) {
+                    this.reverseLookup.edges[elementId] = curKey
                 }
                 return acc;
             }, {} as EdgeDict
         );
     }
 
-    getConnection(nodeId: string): DiGraphConnections {
+    getConnections(nodeId: string): DiGraphConnections {
         // downstream connections only
         const connections: DiGraphConnections = {
             nodes: [nodeId],
@@ -130,7 +147,7 @@ export class DiGraph {
         for (const [n, e] of Object.entries(this.adj[nodeId])) {
             if (e) {
                 connections.edges.push(e); // Note* inplace/mutable change
-                const downstreamConnnections = this.getConnection(n);
+                const downstreamConnnections = this.getConnections(n);
                 connections.edges = connections.edges.concat(downstreamConnnections.edges); // Note* concat is immutable
                 connections.nodes = connections.nodes.concat(downstreamConnnections.nodes);
             }

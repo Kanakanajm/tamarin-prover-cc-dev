@@ -4,12 +4,15 @@ import * as d3 from "d3";
 import { extendCurvePath, getCubicBezierCurve, getCubicBezierCurveGradients } from "./path";
 import { calculateCentroid, calculateEllipseRadii, cross, direction, dot, Ellipse, intersect, inv, print2f, project, Ray, sub, traverse, Vec2 } from "./math";
 import { VizGraph } from "./viz";
-import { DiGraph } from "./digraph";
+import { DiGraph, DiGraphConnections } from "./digraph";
+import './style.css';
 
 const ZOOM_LEVEL_THRESHOLD = 0.99;
 const ARROW_HEAD_WIDTH = 7;
 const ARROW_HEAD_HEIGHT = 10;
 const ARROW_HEAD_HALF_WIDTH = ARROW_HEAD_WIDTH / 2;
+const GRAPH_NODE_SELECTOR = "g.node.record,g.node.ellipse";
+
 type ZoomLevel = "ZoomIn" | "ZoomOut";
 
 export interface ActionText {
@@ -57,159 +60,8 @@ function getTitleText(g: SVGGElement): string {
   return d3.select<SVGGElement, unknown>(g).selectChild<SVGTitleElement>("title").text();
 }
 
-function minimizeEdge(g: SVGGElement, fromNode: SVGGElement | null, toNode: SVGGElement | null): SVGGElement {
-  const oldEdge = d3.select(g);
-  const oldEdgePath = oldEdge.selectChild<SVGPathElement>("path");
-  const oldEdgePolygon = oldEdge.selectChild<SVGPathElement>("polygon");
-  const edgeStrokeWidth = oldEdgePolygon.attr("stroke-width") === null ? 1 : Number(oldEdgePolygon.attr("stroke-width"));
-  const arrowHeadTipOffset = Math.sqrt(ARROW_HEAD_HALF_WIDTH * ARROW_HEAD_HALF_WIDTH + ARROW_HEAD_HEIGHT * ARROW_HEAD_HEIGHT) / ARROW_HEAD_HALF_WIDTH * (edgeStrokeWidth / 2);
-  const arrowHeadRealHeight = ARROW_HEAD_HEIGHT + arrowHeadTipOffset + edgeStrokeWidth / 2;
-
-  const minimized = d3.create<SVGGElement>("svg:g")
-    .attr("id", oldEdge.attr("id"))
-    .attr("class", "edge new-edge");
-
-  minimized.append("title"); // need to be completed with same title as the old one
-
-  let edgePath: string = oldEdgePath.attr("d");
-  const oldCurve = getCubicBezierCurve(edgePath);
-  const [oldTailGrad, oldHeadGrad] = getCubicBezierCurveGradients(oldCurve);
-
-  let isTailReprojected = false;
-
-  if (fromNode) {
-    // the node where the edge starts from
-    const fromEllipse = asEllipse(d3.select(fromNode)
-      .select<SVGEllipseElement>("ellipse").node()!); // WARNING* ! used
-
-    // start from the starting point of the curve and in direction of the negative gradient
-    // opposite of the (arrow) path's direction
-    const tailRay: Ray = {
-      o: oldCurve.start,
-      d: inv(oldTailGrad)
-    };
-
-    // intersection to the from-ellipse by extending the tail ray
-    const tailIts = intersect(tailRay, fromEllipse);
-
-    if (tailIts) {
-      edgePath = extendCurvePath(edgePath, traverse(tailRay, tailIts));
-    }
-    else {
-      isTailReprojected = true;
-      const tailProj = project(oldCurve.start, fromEllipse);
-      edgePath = `M${print2f(tailProj)}L${print2f(oldCurve.end)}`;
-    }
-  }
-
-  if (toNode) {
-    // the node where the edge ends at
-    const toEllipse = asEllipse(d3.select(toNode)
-      .selectChild<SVGEllipseElement>("ellipse").node()!);
-
-    const headRay: Ray = {
-      o: oldCurve.end,
-      d: oldHeadGrad
-    };
-
-    const headIts = intersect(headRay, toEllipse);
-    let headItsPoint: Vec2;
-    let headDirection: Vec2;
-    if (headIts) {
-      // has to consider the offset of the arrow head
-      edgePath = extendCurvePath(edgePath, undefined, traverse(headRay, headIts - arrowHeadRealHeight));
-      headItsPoint = traverse(headRay, headIts);
-      headDirection = inv(headRay.d);
-
-    }
-    else {
-      const headProj = project(oldCurve.end, toEllipse);
-      headItsPoint = headProj;
-
-      if (isTailReprojected) {
-        throw new Error("Not implemented yet")
-      } else {
-        const projHeadRay: Ray = {
-          o: headProj,
-          d: direction(headProj, oldCurve.start)
-        }
-        edgePath = `M${print2f(oldCurve.start)}L${print2f(traverse(projHeadRay, arrowHeadRealHeight))}`;
-        headDirection = projHeadRay.d;
-      }
-
-    }
-    // add new arrow head
-
-    // We obtain the angle between the end segment and vector (0, -1) (since SVG's rotation transform is defined as an angle of the angle from direction (0, -1) in clockwise manner) by taking the dot product of the inverse of the end ray's direction and vector (0, -1). The inversion (-endRay.d) is because we want the end segment's direction to point out so that it is comparable with the vector (0, -1) which is also pointing out. Math.acos(x) gives the result in radian so we have to convert it back to degree. Finally, the angle we calculated needed to be inverted (counter-clockwise) 
-
-    const rotation = (cross({ x: 0, y: -1 }, headDirection) > 0 ? 1 : -1) * Math.acos(dot(headDirection, { x: 0, y: -1 })) * 180 / Math.PI;
-    /**
-    * Arrow Head Creation
-    * Arrow heads created by graphviz have a width of 7 and a height of 10.
-    * After edge re-route i.e. the start and end points get extended to their from and to-nodes respectively, the arrow heads (which are typically at the end points of the edges) must be re-created as well.
-    * The arrow head triangle is first created as an upside down triangle with the tip pointing down and the base paralleling with the x-axis i.e. as ▼
-    * The arrow head is then rotated to be aligned with the end point's gradient direction i.e. to be aligned with the last / end segment of the edge.
-    */
-    const arrowHeadTipPoint = sub(headItsPoint, { x: 0, y: arrowHeadTipOffset });
-    const arrowHeadRightPoint = sub(arrowHeadTipPoint, { x: -ARROW_HEAD_HALF_WIDTH, y: ARROW_HEAD_HEIGHT });
-    const arrowHeadLeftPoint = sub(arrowHeadTipPoint, { x: ARROW_HEAD_HALF_WIDTH, y: ARROW_HEAD_HEIGHT });
-    minimized.append("path")
-      .attr("d", `M${print2f(arrowHeadLeftPoint)}L${print2f(arrowHeadTipPoint)}L${print2f(arrowHeadRightPoint)}Z`)
-      .attr("fill", oldEdgePolygon.attr("fill"))
-      .attr("stroke", oldEdgePolygon.attr("stroke"))
-      .attr("stroke-width", oldEdgePolygon.attr("stroke-width"))
-      .attr("transform", `rotate(${rotation},${print2f(headItsPoint)})`);
-  }
-  else {
-    // keep the old arrow head
-    minimized.append("polygon")
-      .attr("points", oldEdgePolygon.attr("points"))
-      .attr("fill", oldEdgePolygon.attr("fill"))
-      .attr("stroke", oldEdgePolygon.attr("stroke"))
-      .attr("stroke-width", oldEdgePolygon.attr("stroke-width"));
-  }
-
-  minimized.append("path")
-    .attr("d", edgePath)
-    .attr("fill", oldEdgePath.attr("fill"))
-    .attr("stroke", oldEdgePath.attr("stroke"))
-    .attr("stroke-width", oldEdgePath.attr("stroke-width"))
-    .attr("stroke-dasharray", oldEdgePath.attr("stroke-dasharray"));
-
-  return minimized.node()!; // I just created it so its node() must be non-null
-}
 
 
-function minimizeNode(g: SVGGElement): SVGGElement {
-  const center = calculateCentroid(g.getBBox());
-  const actionText = getActionText(g);
-
-  const minimized = d3.create<SVGGElement>("svg:g")
-    .attr("id", g.getAttribute("id"))
-    .attr("class", "node mini-record");
-
-  minimized.append("title")
-    .text(getTitleText(g));
-
-  minimized.append("ellipse")
-    .attr("cx", center.x)
-    .attr("cy", center.y)
-    .attr("rx", calculateEllipseRadii(actionText.bb?.width ?? 50, 15)) // 15 = margin x
-    .attr("ry", calculateEllipseRadii(actionText.bb?.height ?? 50, 8)) // 8 = margin y
-    .attr("stroke", "black")
-    .attr("fill", getPolygonFillColor(g));
-
-  minimized.append("text")
-    .attr("x", center.x)
-    .attr("y", center.y)
-    .attr("text-anchor", "middle")
-    .attr("alignment-baseline", "middle")
-    .attr("font-family", "Helvetica,sans-Serif") // *WARNING, hard-coded, pls adapt it to record font family
-    .attr("font-size", "8") // *WARNING, hard-coded, pls adapt it to record font size
-    .text(actionText.text ?? "default");
-
-  return minimized.node()!; // I just created it so its node() must be non-null
-}
 
 /** A dictionary where uses zoom level as key 
  * and the raw <g> element that contains how the object should be rendered on screen as value */
@@ -234,6 +86,8 @@ export class DotGraphViz extends HTMLElement {
       edges: {},
       nodes: {}
     }
+
+  highlightConnections?: DiGraphConnections;
 
   constructor() {
     super();
@@ -262,6 +116,19 @@ export class DotGraphViz extends HTMLElement {
       const zoomBehavior = d3.zoom<SVGSVGElement, unknown>().on("zoom", this.handleZoom)
       // register zoom behavior
       d3.select(this.svg).call(zoomBehavior);
+
+      // register onclick highlight event
+      d3.select(this.svgg).selectAll<SVGGElement, unknown>(GRAPH_NODE_SELECTOR).on("click", this.handleNodeClick)
+
+      // register clear highlight event
+      document.addEventListener("click", (event: MouseEvent) => {
+        const target = event.target as HTMLElement;
+        // only clear when click on area that is not a node
+        if (!target.closest(GRAPH_NODE_SELECTOR)) {
+          this.clearHighlight();
+          this.highlightConnections = undefined;
+        }
+      });
     });
   }
 
@@ -279,7 +146,7 @@ export class DotGraphViz extends HTMLElement {
             "ZoomOut": null
           }
           this.minimizableObjects.nodes[nodeId]["ZoomIn"] = nodeEl;
-          this.minimizableObjects.nodes[nodeId]["ZoomOut"] = minimizeNode(nodeEl);
+          this.minimizableObjects.nodes[nodeId]["ZoomOut"] = this.minimizeNode(nodeEl);
         }
       }
     }
@@ -297,7 +164,7 @@ export class DotGraphViz extends HTMLElement {
           // minimize edges requires information about the from- and to- node
           const minimizedFromNode = this.minimizableObjects.nodes[edge.from] ? this.minimizableObjects.nodes[edge.from]["ZoomOut"] : null;
           const minimizedToNode = this.minimizableObjects.nodes[edge.to] ? this.minimizableObjects.nodes[edge.to]["ZoomOut"] : null;
-          this.minimizableObjects.edges[edgeId]["ZoomOut"] = minimizeEdge(
+          this.minimizableObjects.edges[edgeId]["ZoomOut"] = this.minimizeEdge(
             edgeEl,
             minimizedFromNode,
             minimizedToNode,
@@ -307,6 +174,158 @@ export class DotGraphViz extends HTMLElement {
     }
 
   };
+  minimizeNode = (g: SVGGElement): SVGGElement => {
+    const center = calculateCentroid(g.getBBox());
+    const actionText = getActionText(g);
+
+    const minimized = d3.create<SVGGElement>("svg:g")
+      .attr("id", g.getAttribute("id"))
+      .attr("class", "node record mini")
+      .on("click", this.handleNodeClick);
+
+    minimized.append("title")
+      .text(getTitleText(g));
+
+    minimized.append("ellipse")
+      .attr("cx", center.x)
+      .attr("cy", center.y)
+      .attr("rx", calculateEllipseRadii(actionText.bb?.width ?? 50, 15)) // 15 = margin x
+      .attr("ry", calculateEllipseRadii(actionText.bb?.height ?? 50, 8)) // 8 = margin y
+      .attr("stroke", "black")
+      .attr("fill", getPolygonFillColor(g));
+
+    minimized.append("text")
+      .attr("x", center.x)
+      .attr("y", center.y)
+      .attr("text-anchor", "middle")
+      .attr("alignment-baseline", "middle")
+      .attr("font-family", "Helvetica,sans-Serif") // *WARNING, hard-coded, pls adapt it to record font family
+      .attr("font-size", "8") // *WARNING, hard-coded, pls adapt it to record font size
+      .text(actionText.text ?? "default");
+
+    return minimized.node()!; // I just created it so its node() must be non-null
+  };
+
+  minimizeEdge = (g: SVGGElement, fromNode: SVGGElement | null, toNode: SVGGElement | null): SVGGElement => {
+    const oldEdge = d3.select(g);
+    const oldEdgePath = oldEdge.selectChild<SVGPathElement>("path");
+    const oldEdgePolygon = oldEdge.selectChild<SVGPathElement>("polygon");
+    const edgeStrokeWidth = oldEdgePolygon.attr("stroke-width") === null ? 1 : Number(oldEdgePolygon.attr("stroke-width"));
+    const arrowHeadTipOffset = Math.sqrt(ARROW_HEAD_HALF_WIDTH * ARROW_HEAD_HALF_WIDTH + ARROW_HEAD_HEIGHT * ARROW_HEAD_HEIGHT) / ARROW_HEAD_HALF_WIDTH * (edgeStrokeWidth / 2);
+    const arrowHeadRealHeight = ARROW_HEAD_HEIGHT + arrowHeadTipOffset + edgeStrokeWidth / 2;
+
+    const minimized = d3.create<SVGGElement>("svg:g")
+      .attr("id", oldEdge.attr("id"))
+      .attr("class", "edge mini");
+
+    minimized.append("title"); // need to be completed with same title as the old one
+
+    let edgePath: string = oldEdgePath.attr("d");
+    const oldCurve = getCubicBezierCurve(edgePath);
+    const [oldTailGrad, oldHeadGrad] = getCubicBezierCurveGradients(oldCurve);
+
+    let isTailReprojected = false;
+
+    if (fromNode) {
+      // the node where the edge starts from
+      const fromEllipse = asEllipse(d3.select(fromNode)
+        .select<SVGEllipseElement>("ellipse").node()!); // WARNING* ! used
+
+      // start from the starting point of the curve and in direction of the negative gradient
+      // opposite of the (arrow) path's direction
+      const tailRay: Ray = {
+        o: oldCurve.start,
+        d: inv(oldTailGrad)
+      };
+
+      // intersection to the from-ellipse by extending the tail ray
+      const tailIts = intersect(tailRay, fromEllipse);
+
+      if (tailIts) {
+        edgePath = extendCurvePath(edgePath, traverse(tailRay, tailIts));
+      }
+      else {
+        isTailReprojected = true;
+        const tailProj = project(oldCurve.start, fromEllipse);
+        edgePath = `M${print2f(tailProj)}L${print2f(oldCurve.end)}`;
+      }
+    }
+
+    if (toNode) {
+      // the node where the edge ends at
+      const toEllipse = asEllipse(d3.select(toNode)
+        .selectChild<SVGEllipseElement>("ellipse").node()!);
+
+      const headRay: Ray = {
+        o: oldCurve.end,
+        d: oldHeadGrad
+      };
+
+      const headIts = intersect(headRay, toEllipse);
+      let headItsPoint: Vec2;
+      let headDirection: Vec2;
+      if (headIts) {
+        // has to consider the offset of the arrow head
+        edgePath = extendCurvePath(edgePath, undefined, traverse(headRay, headIts - arrowHeadRealHeight));
+        headItsPoint = traverse(headRay, headIts);
+        headDirection = inv(headRay.d);
+      }
+      else {
+        const headProj = project(oldCurve.end, toEllipse);
+        headItsPoint = headProj;
+
+        if (isTailReprojected) {
+          throw new Error("Not implemented yet")
+        } else {
+          const projHeadRay: Ray = {
+            o: headProj,
+            d: direction(headProj, oldCurve.start)
+          }
+          edgePath = `M${print2f(oldCurve.start)}L${print2f(traverse(projHeadRay, arrowHeadRealHeight))}`;
+          headDirection = projHeadRay.d;
+        }
+
+      }
+      // add new arrow head
+
+      // We obtain the angle between the end segment and vector (0, -1) (since SVG's rotation transform is defined as an angle of the angle from direction (0, -1) in clockwise manner) by taking the dot product of the inverse of the end ray's direction and vector (0, -1). The inversion (-endRay.d) is because we want the end segment's direction to point out so that it is comparable with the vector (0, -1) which is also pointing out. Math.acos(x) gives the result in radian so we have to convert it back to degree. Finally, the angle we calculated needed to be inverted (counter-clockwise) 
+
+      const rotation = (cross({ x: 0, y: -1 }, headDirection) > 0 ? 1 : -1) * Math.acos(dot(headDirection, { x: 0, y: -1 })) * 180 / Math.PI;
+      /**
+      * Arrow Head Creation
+      * Arrow heads created by graphviz have a width of 7 and a height of 10.
+      * After edge re-route i.e. the start and end points get extended to their from and to-nodes respectively, the arrow heads (which are typically at the end points of the edges) must be re-created as well.
+      * The arrow head triangle is first created as an upside down triangle with the tip pointing down and the base paralleling with the x-axis i.e. as ▼
+      * The arrow head is then rotated to be aligned with the end point's gradient direction i.e. to be aligned with the last / end segment of the edge.
+      */
+      const arrowHeadTipPoint = sub(headItsPoint, { x: 0, y: arrowHeadTipOffset });
+      const arrowHeadRightPoint = sub(arrowHeadTipPoint, { x: -ARROW_HEAD_HALF_WIDTH, y: ARROW_HEAD_HEIGHT });
+      const arrowHeadLeftPoint = sub(arrowHeadTipPoint, { x: ARROW_HEAD_HALF_WIDTH, y: ARROW_HEAD_HEIGHT });
+      minimized.append("path")
+        .attr("d", `M${print2f(arrowHeadLeftPoint)}L${print2f(arrowHeadTipPoint)}L${print2f(arrowHeadRightPoint)}Z`)
+        .attr("fill", oldEdgePolygon.attr("fill"))
+        .attr("stroke", oldEdgePolygon.attr("stroke"))
+        .attr("stroke-width", oldEdgePolygon.attr("stroke-width"))
+        .attr("transform", `rotate(${rotation},${print2f(headItsPoint)})`);
+    }
+    else {
+      // keep the old arrow head
+      minimized.append("polygon")
+        .attr("points", oldEdgePolygon.attr("points"))
+        .attr("fill", oldEdgePolygon.attr("fill"))
+        .attr("stroke", oldEdgePolygon.attr("stroke"))
+        .attr("stroke-width", oldEdgePolygon.attr("stroke-width"));
+    }
+
+    minimized.append("path")
+      .attr("d", edgePath)
+      .attr("fill", oldEdgePath.attr("fill"))
+      .attr("stroke", oldEdgePath.attr("stroke"))
+      .attr("stroke-width", oldEdgePath.attr("stroke-width"))
+      .attr("stroke-dasharray", oldEdgePath.attr("stroke-dasharray"));
+
+    return minimized.node()!; // I just created it so its node() must be non-null
+  }
 
   handleZoom = (event: d3.D3ZoomEvent<SVGSVGElement, unknown>) => {
     if (!this.svgg)
@@ -348,7 +367,54 @@ export class DotGraphViz extends HTMLElement {
         this.svgg.appendChild(node[zoomLevel]);
       }
     }
+
+    // keep highlight state
+    this.highlight();
   };
+
+  handleNodeClick = (event: MouseEvent) => {
+    if (!this.graph)
+      return;
+
+    const nodeElementId = d3.select(event.currentTarget as HTMLElement).attr("id");
+    this.highlightConnections = this.graph.getConnections(this.graph.reverseLookup.nodes[nodeElementId]);
+
+    // clear highlight
+    this.clearHighlight();
+
+    this.highlight();
+  };
+
+  highlight = () => {
+    if (!this.graph || !this.svgg || !this.highlightConnections)
+      return;
+
+    // add new highlight
+    d3.select(this.svgg).classed("highlighted", true);
+
+    for (const nodeId of this.highlightConnections.nodes) {
+      d3.select("#" + this.graph.nodes[nodeId].elementId)
+        .classed("active", true);
+    }
+
+    for (const edgeId of this.highlightConnections.edges) {
+      d3.select("#" + this.graph.edges[edgeId].elementId)
+        .classed("active", true);
+    }
+  }
+
+  clearHighlight = () => {
+    if (!this.svgg)
+      return;
+
+    const g = d3.select(this.svgg).classed("highlighted", false);
+
+    g.selectChildren(GRAPH_NODE_SELECTOR)
+      .classed("active", false);
+
+    g.selectChildren("g.edge")
+      .classed("active", false);
+  }
 }
 
 customElements.define("dot-graph-viz", DotGraphViz);
