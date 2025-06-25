@@ -56,6 +56,7 @@ export class DiGraph {
             edges: {}
         }
 
+    //extract abbreviations
     constructor(vizGraph: VizGraph, svg: SVGSVGElement) {
         const abbrevObj = vizGraph.objects.find(n => n.shape === "plain");
         if (abbrevObj) {
