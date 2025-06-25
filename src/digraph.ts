@@ -159,7 +159,6 @@ export class DiGraph {
                 return acc;
             }, {} as EdgeDict
         );
-        console.log(this);
     }
 
     getConnections(nodeId: string): DiGraphConnections {

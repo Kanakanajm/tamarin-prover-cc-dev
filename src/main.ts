@@ -102,7 +102,6 @@ export class DotGraphViz extends HTMLElement {
       this.json = viz.renderJSON(dotString) as VizGraph;
 
       this.graph = new DiGraph(this.json, this.svg);
-      console.log(this.graph);
       // attach SVG to DOM
       this.append(this.svg);
 
