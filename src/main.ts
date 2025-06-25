@@ -105,6 +105,18 @@ export class DotGraphViz extends HTMLElement {
       // attach SVG to DOM
       this.append(this.svg);
 
+      // Allow selecting/copying text elements with the mouse 
+      d3.selectAll("text")
+        .style("user-select", "text")
+        .style("pointer-events", "all")
+        .style("cursor", "text")
+        .on("mousedown", function (event) {
+          event.stopPropagation();
+        })
+        .on("dblclick", function (event) {
+          event.stopPropagation(); 
+        });
+
       // extract and compute zoom level dependent shape for minimizable objects
       this.constructMinimizableObjects();
 
@@ -117,7 +129,7 @@ export class DotGraphViz extends HTMLElement {
       this.initTransform = `translate(${translate.matrix.e} ${translate.matrix.f})`;
 
       // create zoom behavior
-      const zoomBehavior = d3.zoom<SVGSVGElement, unknown>().on("zoom", this.handleZoom)
+      const zoomBehavior = d3.zoom<SVGSVGElement, unknown>().scaleExtent([0.5, 2]).on("zoom", this.handleZoom)
       // register zoom behavior
       d3.select(this.svg).call(zoomBehavior);
 
