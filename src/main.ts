@@ -417,7 +417,7 @@ export class DotGraphViz extends HTMLElement {
   }
 
   highlight = () => {
-    if (!this.graph || !this.svgg || !this.highlightConnections)
+    if (!this.graph || !this.svgg || !this.highlightConnections || (this.highlightConnections.nodes.length === 0 && this.highlightConnections.edges.length === 0))
       return;
 
     // clear highlight
