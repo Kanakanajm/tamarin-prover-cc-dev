@@ -87,7 +87,10 @@ export class DotGraphViz extends HTMLElement {
       nodes: {}
     }
 
-  highlightConnections?: DiGraphConnections;
+  highlightConnections: DiGraphConnections | null = {
+    nodes: [],
+    edges: []
+  }
 
   constructor() {
     super();
@@ -97,7 +100,9 @@ export class DotGraphViz extends HTMLElement {
     instance().then(viz => {
       this.svg = viz.renderSVGElement(dotString);
       this.json = viz.renderJSON(dotString) as VizGraph;
+
       this.graph = new DiGraph(this.json, this.svg);
+      console.log(this.graph);
       // attach SVG to DOM
       this.append(this.svg);
 
@@ -124,11 +129,26 @@ export class DotGraphViz extends HTMLElement {
       document.addEventListener("click", (event: MouseEvent) => {
         const target = event.target as HTMLElement;
         // only clear when click on area that is not a node
-        if (!target.closest(GRAPH_NODE_SELECTOR)) {
+        if (!target.closest(GRAPH_NODE_SELECTOR) && !target.closest("text.abbrev")) {
           this.clearHighlight();
-          this.highlightConnections = undefined;
+          this.highlightConnections = null;
         }
       });
+
+      // add abbreviation text click handler
+      if (this.graph.abbrev.elementId) {
+
+        const abbrevs = Object.keys(this.graph.abbrev.abbreviations);
+        d3.select(this.svgg)
+          .select("#" + this.graph.abbrev.elementId)
+          .classed("abbrev-table", true)
+          .selectChildren<SVGTextElement, unknown>("text")
+          .filter(function () {
+            return abbrevs.includes(this.textContent || "");
+          })
+          .classed("abbrev", true)
+          .on("click", this.handleAbbreviationTextClick);
+      }
     });
   }
 
@@ -383,16 +403,24 @@ export class DotGraphViz extends HTMLElement {
     this.highlight();
   };
 
-  handleAbbrevationTextClick = (event: MouseEvent) => {
-    // this doesn't work here, use event.target/event.currentTarget
-    // this.highlightConnections.nodes = this.graph.getAbbrevationNodes()
-    // this.highlightConnections.edges = {};
-    // this.highlight();
+  handleAbbreviationTextClick = (event: MouseEvent) => {
+
+    if (!this.graph)
+      return;
+    const el = event.target as HTMLElement;
+    const abbrev = el.textContent ?? "";
+    this.highlightConnections = {
+      nodes: this.graph.abbrev.abbreviations[abbrev],
+      edges: []
+    };
+
+    this.highlight();
   }
 
   highlight = () => {
     if (!this.graph || !this.svgg || !this.highlightConnections)
       return;
+
     // clear highlight
     this.clearHighlight();
 

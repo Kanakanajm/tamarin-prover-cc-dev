@@ -9,12 +9,18 @@ export interface VizEdge {
 
 export interface VizObject {
     _gvid: number,
-    // _draw: VizObjectDraw,
+    _ldraw_?: VizObjectDraw[],
     name: string,
     shape: VizNodeShape,
+    label?: string
 }
 
-// export interface VizObjectDraw
+export interface VizObjectDraw {
+    op: VizObjectDrawOp,
+    text?: string,
+}
+
+export type VizObjectDrawOp = "F" | "c" | "T" | "S" | "p"
 
 export interface VizGraph {
     edges: VizEdge[]

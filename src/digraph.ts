@@ -40,7 +40,12 @@ export class DiGraph {
     nodes: NodeDict;
     edges: EdgeDict;
     adj: AdjMatrix;
-    // abbrev?: { [key: string]: string[] };
+    abbrev: {
+        elementId?: string,
+        abbreviations: { [key: string]: string[] }
+    } = {
+            abbreviations: {}
+        };
 
     // table uses elementId as key to lookup (node/edge)Id
     reverseLookup: {
@@ -52,11 +57,28 @@ export class DiGraph {
         }
 
     constructor(vizGraph: VizGraph, svg: SVGSVGElement) {
+        const abbrevObj = vizGraph.objects.find(n => n.shape === "plain");
+        if (abbrevObj) {
+            // find abbreviation table's element id
+            this.abbrev.elementId = findGElementIdByTitle(svg, abbrevObj.name);
+            // extract abbreviations
+            abbrevObj._ldraw_?.filter(d => d.op === "T").forEach((d, i) => {
+                if (i % 3 === 0 && d.text) {
+                    this.abbrev.abbreviations[d.text] = [];
+                }
+            });
+        }
 
 
         // extract nodes
         this.nodes = vizGraph.objects.filter(n => n.shape === "ellipse" || n.shape === "record").reduce(
             (acc, cur) => {
+                // check if node contains abbrevation
+                Object.keys(this.abbrev.abbreviations).forEach(k => {
+                    if (cur.label?.includes(k)) {
+                        this.abbrev.abbreviations[k].push(cur._gvid.toString());
+                    }
+                });
                 acc[cur._gvid] = {
                     title: cur.name,
                     minimizable: cur.shape === "record"
@@ -137,6 +159,7 @@ export class DiGraph {
                 return acc;
             }, {} as EdgeDict
         );
+        console.log(this);
     }
 
     getConnections(nodeId: string): DiGraphConnections {
