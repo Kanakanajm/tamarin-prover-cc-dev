@@ -68,7 +68,3 @@ export function extendCurvePath(d: string, start?: Vec2, end?: Vec2): string {
     }
     return newD;
 }
-
-function extendStartSegment(oldD: string): string {
-    return "";
-}
