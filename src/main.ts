@@ -143,6 +143,7 @@ export class DotGraphViz extends HTMLElement {
         if (!target.closest(GRAPH_NODE_SELECTOR) && !target.closest("text.abbrev")) {
           this.clearHighlight();
           this.highlightConnections = null;
+          window.getSelection()?.removeAllRanges();
         }
       });
 
@@ -162,7 +163,6 @@ export class DotGraphViz extends HTMLElement {
       }
     });
   }
-
   constructMinimizableObjects = () => {
     if (!this.graph)
       return;
