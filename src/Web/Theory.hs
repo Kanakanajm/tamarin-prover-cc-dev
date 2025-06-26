@@ -36,6 +36,7 @@ module Web.Theory
   , applyProverAtPath
   , applyDiffProverAtPath
   , applyProverAtPathDiff
+  , dotGraphString
   )
 where
 
@@ -175,7 +176,8 @@ applyDiffProverAtPath thy lemmaName proofPath prover =
 
 -- | Reference a dot graph for the given path.
 refDotPath :: HtmlDocument d => RenderUrl -> TheoryIdx -> TheoryPath -> d
-refDotPath renderUrl tidx path = closedTag "img" [("class", "graph"), ("src", imgPath), ("onclick", jsOpenSrcInNewTab)]
+refDotPath renderUrl tidx path = closedTag "dot-graph-viz" [("dotsrc", imgPath)]
+-- [("class", "graph"), ("src", imgPath), ("onclick", jsOpenSrcInNewTab)]
   where
     imgPath = T.unpack $ renderUrl (TheoryGraphR tidx path)
     jsOpenSrcInNewTab = "window.open(this.src, '_blank')"
@@ -1278,6 +1280,32 @@ htmlThyDbgPath thy path = go path
       prettySystem <$> psInfo (root proof)
     go _ = Nothing
 -}
+
+dotGraphString :: (System -> D.Dot ())         -- ^ Function to render a System to Graphviz dot format.
+           -> ClosedTheory                 -- ^ Theory from which to extract the 'System'.
+           -> TheoryPath                   -- ^ Path of the 'System' in the theory.
+           -> Maybe String                       -- ^ Return .dot graph definition as a raw string 
+dotGraphString toDot thy thyPath = do
+  (jsonLabel, system) <- thyPathSystem thyPath
+  return (D.showDot "G" (toDot system))
+  where
+    thyPathSystem :: TheoryPath -> Maybe (String, System)
+    thyPathSystem (TheorySource k i j)          = casesSystem k i j
+    thyPathSystem (TheoryProof lemma proofPath) = proofPathSystem lemma proofPath
+    thyPathSystem _                             = error "Unhandled theory path. This is a bug."
+
+    -- | Get a string serialization for one case.
+    casesSystem k i j = do
+      let jsonLabel = "Theory: " ++ (get thyName thy) ++ " Case: " ++ show i ++ ":" ++ show j
+          cases = map (getDisj . get cdCases) (getSource k thy)
+      return (jsonLabel, snd $ cases !! (i-1) !! (j-1))
+
+    -- | Get string serialization for proof path in lemma.
+    proofPathSystem lemma proofPath = do
+      let jsonLabel = "Theory: " ++ (get thyName thy) ++ " Lemma: " ++ lemma 
+      subProof <- resolveProofPath thy lemma proofPath
+      sequent <- psInfo $ root subProof
+      return (jsonLabel, sequent)
 
 -- | Output either JSON or an image corresponding to the given theory path and return the generated file's path.
 -- Returns Nothing if there was an error during the image generation.

@@ -1,0 +1,21 @@
+g.node.record,
+g.node.ellipse {
+  cursor: pointer;
+}
+
+g.highlighted>g.active {
+  opacity: 1;
+}
+
+g.highlighted>g:not(.active):not(.abbrev-table) {
+  opacity: 0.2;
+}
+
+text.abbrev {
+  cursor: pointer;
+}
+
+text.abbrev:hover {
+  text-decoration: underline;
+  fill: blue;
+}

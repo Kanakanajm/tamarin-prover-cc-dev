@@ -120,6 +120,8 @@ import           Text.Read                    (readMaybe)
 import           Theory.Constraint.System.Graph.Graph
 import           Theory.Constraint.System.Dot (BoringNodeStyle, dotSystemCompact, doNodeStyle)
 
+import           Data.Text (Text)
+
 -- Quasi-quotation syntax changed from GHC 6 to 7,
 -- so we need this switch in order to support both
 #if __GLASGOW_HASKELL__ >= 700
@@ -927,21 +929,21 @@ getOptions = do
 
 
 -- | Get rendered graph for theory and given path.
-getTheoryGraphR :: TheoryIdx -> TheoryPath -> Handler ()
+getTheoryGraphR :: TheoryIdx -> TheoryPath -> Handler Text
 getTheoryGraphR idx path = withTheory idx ( \ti -> do
-      yesod <- getYesod
       (graphOptions, dotOptions) <- getOptions
-      img' <- liftIO $ traceExceptions "getTheoryGraphR" $
-        imgThyPath
-          (imageFormat yesod)
-          (outputCmd yesod)
-          (cacheDir yesod)
-          (dotSystemCompact graphOptions dotOptions)
-          (\label system -> sequentsToJSONPretty graphOptions [(label, system)])
-          (tiTheory ti) path
-      case img' of
-        Nothing -> notFound
-        Just img -> sendFile (fromString . imageFormatMIME $ imageFormat yesod) img)
+      case (dotGraphString (dotSystemCompact graphOptions dotOptions) (tiTheory ti) path) of 
+        Just dotStr -> return (T.pack dotStr)
+        Nothing     -> notFound
+      )
+      -- dot' <- dotGraphString
+      --     (dotSystemCompact graphOptions dotOptions)
+      --     (tiTheory ti) 
+      --     path
+      -- case dot' of
+      --   Nothing -> notFound
+      --   Just dot -> return dot)
+          -- sendFile (fromString . imageFormatMIME $ imageFormat yesod) img)
 
 -- | Get rendered graph for theory and given path.
 getTheoryGraphDiffR :: TheoryIdx -> DiffTheoryPath -> Handler ()

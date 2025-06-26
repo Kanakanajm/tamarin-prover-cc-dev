@@ -40,6 +40,13 @@ tamarin-clean:
 .PHONY: clean
 clean:	tamarin-clean
 
+# Build Frontend
+.PHONY: frontend
+frontend:
+	cd tgui-new-concept && npm install && npm run build
+	cp tgui-new-concept/dist/assets/index.js data/js/interactive-dot.js
+	cp tgui-new-concept/dist/assets/index.css data/css/interactive-dot.css
+
 # ###########################################################################
 # NOTE the remainder makefile is FOR DEVELOPERS ONLY.
 # It is by no means official in any form and should be IGNORED :-)

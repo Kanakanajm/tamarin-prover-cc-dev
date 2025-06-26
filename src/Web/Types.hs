@@ -680,6 +680,7 @@ defaultLayout' w = do
     <html>
       <head>
         <title>#{pageTitle page}
+        <link rel=stylesheet href=/static/css/interactive-dot.css>
         <link rel=stylesheet href=/static/css/tamarin-prover-ui.css>
         <link rel=stylesheet href=/static/css/jquery-contextmenu.css>
         <link rel=stylesheet href=/static/css/smoothness/jquery-ui.css>
@@ -690,6 +691,7 @@ defaultLayout' w = do
         <script src=/static/js/jquery-superfish.js></script>
         <script src=/static/js/jquery-contextmenu.js></script>
         <script src=/static/js/tamarin-prover-ui.js></script>
+        <script type="module" src=/static/js/interactive-dot.js></script>
         ^{pageHead page}
       <body>
         $maybe msg <- message
