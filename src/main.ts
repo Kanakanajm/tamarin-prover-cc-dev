@@ -5,7 +5,7 @@ import { calculateCentroid, calculateEllipseRadii, cross, direction, dot, Ellips
 import { VizGraph } from "./viz";
 import { DiGraph, DiGraphConnections } from "./digraph";
 import './style.css';
-// import dotString from "./bug.dot?raw"
+import dotString from "./bug.dot?raw"
 
 const ZOOM_LEVEL_THRESHOLD = 0.99;
 const ARROW_HEAD_WIDTH = 7;
@@ -102,22 +102,22 @@ export class DotGraphViz extends HTMLElement {
 
   connectedCallback() {
     instance().then(async viz => {
-      const dotsrc = this.getAttribute("dotsrc");
-      if (!dotsrc) {
-        console.error("No dot graph source url provided.");
-        return;
-      }
-      const res = await fetch(dotsrc);
-      if (!res.ok) {
-        console.error("Failed to fetch dot graph definition.");
-        return;
-      }
+      // const dotsrc = this.getAttribute("dotsrc");
+      // if (!dotsrc) {
+      //   console.error("No dot graph source url provided.");
+      //   return;
+      // }
+      // const res = await fetch(dotsrc);
+      // if (!res.ok) {
+      //   console.error("Failed to fetch dot graph definition.");
+      //   return;
+      // }
 
-      const dotString = await res.text();
-      if (!dotString || !dotString.includes("digraph")) {
-        console.error("Invalid dot graph string");
-        return;
-      }
+      // const dotString = await res.text();
+      // if (!dotString || !dotString.includes("digraph")) {
+      //   console.error("Invalid dot graph string");
+      //   return;
+      // }
 
       console.debug("Received dot string");
       console.debug(dotString);
@@ -146,9 +146,10 @@ export class DotGraphViz extends HTMLElement {
         });
 
       // extract and compute zoom level dependent shape for minimizable objects
-      this.constructMinimizableObjects();
 
       this.svgg = select(this.svg).selectChild<SVGGElement>("g").node();
+      this.constructMinimizableObjects();
+
       // get initial translation transform
       const translate = this.svgg?.transform.baseVal.getItem(2);
       if (!translate || translate.type !== SVGTransform.SVG_TRANSFORM_TRANSLATE) {
@@ -163,7 +164,7 @@ export class DotGraphViz extends HTMLElement {
 
       // register onclick highlight event
       for (const node of Object.values(this.graph.nodes)) {
-        select("#" + node.elementId)
+        select(this.svgg).selectChild("#" + node.elementId)
           .classed("clickable", true).on("click", this.handleNodeClick)
       }
 
@@ -183,7 +184,7 @@ export class DotGraphViz extends HTMLElement {
 
         const abbrevs = Object.keys(this.graph.abbrev.abbreviations);
         select(this.svgg)
-          .select("#" + this.graph.abbrev.elementId)
+          .selectChild("#" + this.graph.abbrev.elementId)
           .classed("abbrev-table", true)
           .selectChildren<SVGTextElement, unknown>("text")
           .filter(function () {
@@ -195,13 +196,13 @@ export class DotGraphViz extends HTMLElement {
     });
   }
   constructMinimizableObjects = () => {
-    if (!this.graph)
+    if (!this.graph || !this.svgg)
       return;
 
     // minimizable nodes
     for (const [nodeId, node] of Object.entries(this.graph.nodes)) {
       if (node.minimizable) {
-        const nodeEl = select<SVGGElement, unknown>("#" + node.elementId).node();
+        const nodeEl = select(this.svgg).selectChild<SVGGElement>("#" + node.elementId).node();
         if (nodeEl) {
           this.minimizableObjects.nodes[nodeId] = {
             "ZoomIn": null,
@@ -216,7 +217,7 @@ export class DotGraphViz extends HTMLElement {
     // minimizable edges
     for (const [edgeId, edge] of Object.entries(this.graph.edges)) {
       if (edge.minimizable) {
-        const edgeEl = select<SVGGElement, unknown>("#" + edge.elementId).node();
+        const edgeEl = select(this.svgg).selectChild<SVGGElement>("#" + edge.elementId).node();
         if (edgeEl) {
           this.minimizableObjects.edges[edgeId] = {
             "ZoomIn": null,
@@ -292,7 +293,7 @@ export class DotGraphViz extends HTMLElement {
     if (fromNode) {
       // the node where the edge starts from
       const fromEllipse = asEllipse(select(fromNode)
-        .select<SVGEllipseElement>("ellipse").node()!); // WARNING* ! used
+        .selectChild<SVGEllipseElement>("ellipse").node()!); // WARNING* ! used
 
       // start from the starting point of the curve and in direction of the negative gradient
       // opposite of the (arrow) path's direction
@@ -476,12 +477,12 @@ export class DotGraphViz extends HTMLElement {
     select(this.svgg).classed("highlighted", true);
 
     for (const nodeId of this.highlightConnections.nodes) {
-      select("#" + this.graph.nodes[nodeId].elementId)
+      select(this.svgg).selectChild("#" + this.graph.nodes[nodeId].elementId)
         .classed("active", true);
     }
 
     for (const edgeId of this.highlightConnections.edges) {
-      select("#" + this.graph.edges[edgeId].elementId)
+      select(this.svgg).selectChild("#" + this.graph.edges[edgeId].elementId)
         .classed("active", true);
     }
   }
