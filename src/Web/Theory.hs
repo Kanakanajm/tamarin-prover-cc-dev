@@ -176,7 +176,8 @@ applyDiffProverAtPath thy lemmaName proofPath prover =
 
 -- | Reference a dot graph for the given path.
 refDotPath :: HtmlDocument d => RenderUrl -> TheoryIdx -> TheoryPath -> d
-refDotPath renderUrl tidx path = closedTag "dot-graph-viz" [("dotsrc", imgPath)]
+refDotPath renderUrl tidx path = withTag "dot-graph-viz" [("dotsrc", imgPath)] (text "")
+  -- closedTag "dot-graph-viz" [("dotsrc", imgPath)]
 -- [("class", "graph"), ("src", imgPath), ("onclick", jsOpenSrcInNewTab)]
   where
     imgPath = T.unpack $ renderUrl (TheoryGraphR tidx path)
@@ -535,8 +536,9 @@ subProofSnippet renderUrl renderImgUrl tidx ti lemma proofPath ctxt prf =
         ++
         [ preformatted (Just "sequent") (prettyNonGraphSystem se)
         , withTag "h3" [] (text $ nCases ++ " sub-case(s)")
-        ] ++
-        subCases
+        ] 
+        -- ++
+        -- subCases
   where
     prettyApplicableProofMethods sys = case proofMethods sys of
         [] | finishedSubterms ctxt sys  -> [ withTag "h3" [] (text "Constraint System is Solved") ]
@@ -603,13 +605,13 @@ subProofSnippet renderUrl renderImgUrl tidx ti lemma proofPath ctxt prf =
     ranking                 = useHeuristic heuristic depth
     tactic                 = selectTactic (tiAutoProver ti) ctxt
     proofMethods            = rankProofMethods ranking tactic ctxt
-    subCases                = concatMap refSubCase $ M.toList $ children prf
-    refSubCase (name, prf') =
-        [ withTag "h4" [] (text "Case" <-> text name)
-        , maybe (text "no proof state available")
-                (const $ refDotPath renderUrl tidx $ TheoryProof lemma (proofPath ++ [name]))
-                (psInfo $ root prf')
-        ]
+    -- subCases                = concatMap refSubCase $ M.toList $ children prf
+    -- refSubCase (name, prf') =
+    --     [ withTag "h4" [] (text "Case" <-> text name)
+    --     , maybe (text "no proof state available")
+    --             (const $ refDotPath renderUrl tidx $ TheoryProof lemma (proofPath ++ [name]))
+    --             (psInfo $ root prf')
+    --     ]
 
 -- | A snippet that explains a sub-proof by displaying its proof state, the
 -- open-goals, and the new cases.
