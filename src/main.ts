@@ -5,6 +5,7 @@ import { calculateCentroid, calculateEllipseRadii, cross, direction, dot, Ellips
 import { VizGraph } from "./viz";
 import { DiGraph, DiGraphConnections } from "./digraph";
 import './style.css';
+// import dotString from "./bug.dot?raw"
 
 const ZOOM_LEVEL_THRESHOLD = 0.99;
 const ARROW_HEAD_WIDTH = 7;
@@ -112,17 +113,17 @@ export class DotGraphViz extends HTMLElement {
         return;
       }
 
-      const dotStr = await res.text();
-      if (!dotStr || !dotStr.includes("digraph")) {
+      const dotString = await res.text();
+      if (!dotString || !dotString.includes("digraph")) {
         console.error("Invalid dot graph string");
         return;
       }
 
       console.debug("Received dot string");
-      console.debug(dotStr);
+      console.debug(dotString);
 
-      this.svg = viz.renderSVGElement(dotStr);
-      this.json = viz.renderJSON(dotStr) as VizGraph;
+      this.svg = viz.renderSVGElement(dotString);
+      this.json = viz.renderJSON(dotString) as VizGraph;
 
       this.graph = new DiGraph(this.json, this.svg);
       // attach SVG to DOM

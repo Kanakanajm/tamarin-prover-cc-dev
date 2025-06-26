@@ -28,4 +28,4 @@ export interface VizGraph {
 }
 
 export type VizEdgeStyle = "invis" | "bold"
-export type VizNodeShape = "plain" | "ellipse" | "record"
+export type VizNodeShape = "plain" | "ellipse" | "record" | "invtrapezium" | "trapezium"

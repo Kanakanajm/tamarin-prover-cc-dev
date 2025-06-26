@@ -72,7 +72,12 @@ export class DiGraph {
 
 
         // extract nodes
-        this.nodes = vizGraph.objects.filter(n => n.shape === "ellipse" || n.shape === "record").reduce(
+        this.nodes = vizGraph.objects.filter(n =>
+            n.shape === "ellipse" ||
+            n.shape === "record" ||
+            n.shape === "invtrapezium" ||
+            n.shape === "trapezium"
+        ).reduce(
             (acc, cur) => {
                 // check if node contains abbrevation
                 Object.keys(this.abbrev.abbreviations).forEach(k => {
