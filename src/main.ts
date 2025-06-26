@@ -10,7 +10,6 @@ const ZOOM_LEVEL_THRESHOLD = 0.99;
 const ARROW_HEAD_WIDTH = 7;
 const ARROW_HEAD_HEIGHT = 10;
 const ARROW_HEAD_HALF_WIDTH = ARROW_HEAD_WIDTH / 2;
-const GRAPH_NODE_SELECTOR = "g.node.record,g.node.ellipse";
 
 type ZoomLevel = "ZoomIn" | "ZoomOut";
 
