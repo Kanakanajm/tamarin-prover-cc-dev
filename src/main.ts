@@ -1,6 +1,5 @@
-import dotString from "./example.dot?raw";
 import { instance } from "@viz-js/viz";
-import * as d3 from "d3";
+import { select, selectAll, zoom, create, D3ZoomEvent } from "d3";
 import { extendCurvePath, getCubicBezierCurve, getCubicBezierCurveGradients } from "./path";
 import { calculateCentroid, calculateEllipseRadii, cross, direction, dot, Ellipse, intersect, inv, print2f, project, Ray, sub, traverse, Vec2 } from "./math";
 import { VizGraph } from "./viz";
@@ -21,7 +20,7 @@ export interface ActionText {
 }
 
 function asEllipse(ellipse: SVGEllipseElement): Ellipse {
-  const selection = d3.select(ellipse);
+  const selection = select(ellipse);
   return {
     c: {
       x: Number(selection.attr("cx")),
@@ -34,11 +33,11 @@ function asEllipse(ellipse: SVGEllipseElement): Ellipse {
 
 
 function getPolygonFillColor(g: SVGGElement): string {
-  return d3.select(g).selectChild("polygon").attr("fill");
+  return select(g).selectChild("polygon").attr("fill");
 }
 
 function getActionText(g: SVGGElement): ActionText {
-  const actionTextSelection = d3.select<SVGGElement, unknown>(g)
+  const actionTextSelection = select<SVGGElement, unknown>(g)
     .selectChildren<SVGTextElement, unknown>("text")
     .filter(function (this) {
       return this.textContent?.startsWith("#") ?? false
@@ -57,7 +56,7 @@ function getActionText(g: SVGGElement): ActionText {
 }
 
 function getTitleText(g: SVGGElement): string {
-  return d3.select<SVGGElement, unknown>(g).selectChild<SVGTitleElement>("title").text();
+  return select<SVGGElement, unknown>(g).selectChild<SVGTitleElement>("title").text();
 }
 
 
@@ -68,6 +67,8 @@ function getTitleText(g: SVGGElement): string {
 type MinimizableObject = { [key in ZoomLevel]: SVGGElement | null };
 
 export class DotGraphViz extends HTMLElement {
+  static observedAttributes = ["dotsrc"];
+
   json?: VizGraph;
   graph?: DiGraph;
   /** Root <svg> element */
@@ -96,17 +97,40 @@ export class DotGraphViz extends HTMLElement {
     super();
   }
 
+  // what to do when observed attributes changed 
+  // attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null) {}
+
   connectedCallback() {
-    instance().then(viz => {
-      this.svg = viz.renderSVGElement(dotString);
-      this.json = viz.renderJSON(dotString) as VizGraph;
+    instance().then(async viz => {
+      const dotsrc = this.getAttribute("dotsrc");
+      if (!dotsrc) {
+        console.error("No dot graph source url provided.");
+        return;
+      }
+      const res = await fetch(dotsrc);
+      if (!res.ok) {
+        console.error("Failed to fetch dot graph definition.");
+        return;
+      }
+
+      const dotStr = await res.text();
+      if (!dotStr || !dotStr.includes("digraph")) {
+        console.error("Invalid dot graph string");
+        return;
+      }
+
+      console.debug("Received dot string");
+      console.debug(dotStr);
+
+      this.svg = viz.renderSVGElement(dotStr);
+      this.json = viz.renderJSON(dotStr) as VizGraph;
 
       this.graph = new DiGraph(this.json, this.svg);
       // attach SVG to DOM
       this.append(this.svg);
 
       // Allow selecting/copying text elements with the mouse 
-      d3.selectAll("text")
+      selectAll("text")
         .style("user-select", "text")
         .style("pointer-events", "all")
         .style("cursor", "text")
@@ -114,13 +138,13 @@ export class DotGraphViz extends HTMLElement {
           event.stopPropagation();
         })
         .on("dblclick", function (event) {
-          event.stopPropagation(); 
+          event.stopPropagation();
         });
 
       // extract and compute zoom level dependent shape for minimizable objects
       this.constructMinimizableObjects();
 
-      this.svgg = d3.select(this.svg).selectChild<SVGGElement>("g").node();
+      this.svgg = select(this.svg).selectChild<SVGGElement>("g").node();
       // get initial translation transform
       const translate = this.svgg?.transform.baseVal.getItem(2);
       if (!translate || translate.type !== SVGTransform.SVG_TRANSFORM_TRANSLATE) {
@@ -129,12 +153,12 @@ export class DotGraphViz extends HTMLElement {
       this.initTransform = `translate(${translate.matrix.e} ${translate.matrix.f})`;
 
       // create zoom behavior
-      const zoomBehavior = d3.zoom<SVGSVGElement, unknown>().scaleExtent([0.5, 2]).on("zoom", this.handleZoom)
+      const zoomBehavior = zoom<SVGSVGElement, unknown>().scaleExtent([0.5, 2]).on("zoom", this.handleZoom)
       // register zoom behavior
-      d3.select(this.svg).call(zoomBehavior);
+      select(this.svg).call(zoomBehavior);
 
       // register onclick highlight event
-      d3.select(this.svgg).selectAll<SVGGElement, unknown>(GRAPH_NODE_SELECTOR).on("click", this.handleNodeClick)
+      select(this.svgg).selectAll<SVGGElement, unknown>(GRAPH_NODE_SELECTOR).on("click", this.handleNodeClick)
 
       // register clear highlight event
       document.addEventListener("click", (event: MouseEvent) => {
@@ -151,7 +175,7 @@ export class DotGraphViz extends HTMLElement {
       if (this.graph.abbrev.elementId) {
 
         const abbrevs = Object.keys(this.graph.abbrev.abbreviations);
-        d3.select(this.svgg)
+        select(this.svgg)
           .select("#" + this.graph.abbrev.elementId)
           .classed("abbrev-table", true)
           .selectChildren<SVGTextElement, unknown>("text")
@@ -170,7 +194,7 @@ export class DotGraphViz extends HTMLElement {
     // minimizable nodes
     for (const [nodeId, node] of Object.entries(this.graph.nodes)) {
       if (node.minimizable) {
-        const nodeEl = d3.select<SVGGElement, unknown>("#" + node.elementId).node();
+        const nodeEl = select<SVGGElement, unknown>("#" + node.elementId).node();
         if (nodeEl) {
           this.minimizableObjects.nodes[nodeId] = {
             "ZoomIn": null,
@@ -185,7 +209,7 @@ export class DotGraphViz extends HTMLElement {
     // minimizable edges
     for (const [edgeId, edge] of Object.entries(this.graph.edges)) {
       if (edge.minimizable) {
-        const edgeEl = d3.select<SVGGElement, unknown>("#" + edge.elementId).node();
+        const edgeEl = select<SVGGElement, unknown>("#" + edge.elementId).node();
         if (edgeEl) {
           this.minimizableObjects.edges[edgeId] = {
             "ZoomIn": null,
@@ -210,7 +234,7 @@ export class DotGraphViz extends HTMLElement {
     const center = calculateCentroid(g.getBBox());
     const actionText = getActionText(g);
 
-    const minimized = d3.create<SVGGElement>("svg:g")
+    const minimized = create<SVGGElement>("svg:g")
       .attr("id", g.getAttribute("id"))
       .attr("class", "node record mini")
       .on("click", this.handleNodeClick);
@@ -239,14 +263,14 @@ export class DotGraphViz extends HTMLElement {
   };
 
   minimizeEdge = (g: SVGGElement, fromNode: SVGGElement | null, toNode: SVGGElement | null): SVGGElement => {
-    const oldEdge = d3.select(g);
+    const oldEdge = select(g);
     const oldEdgePath = oldEdge.selectChild<SVGPathElement>("path");
     const oldEdgePolygon = oldEdge.selectChild<SVGPathElement>("polygon");
     const edgeStrokeWidth = oldEdgePolygon.attr("stroke-width") === null ? 1 : Number(oldEdgePolygon.attr("stroke-width"));
     const arrowHeadTipOffset = Math.sqrt(ARROW_HEAD_HALF_WIDTH * ARROW_HEAD_HALF_WIDTH + ARROW_HEAD_HEIGHT * ARROW_HEAD_HEIGHT) / ARROW_HEAD_HALF_WIDTH * (edgeStrokeWidth / 2);
     const arrowHeadRealHeight = ARROW_HEAD_HEIGHT + arrowHeadTipOffset + edgeStrokeWidth / 2;
 
-    const minimized = d3.create<SVGGElement>("svg:g")
+    const minimized = create<SVGGElement>("svg:g")
       .attr("id", oldEdge.attr("id"))
       .attr("class", "edge mini");
 
@@ -260,7 +284,7 @@ export class DotGraphViz extends HTMLElement {
 
     if (fromNode) {
       // the node where the edge starts from
-      const fromEllipse = asEllipse(d3.select(fromNode)
+      const fromEllipse = asEllipse(select(fromNode)
         .select<SVGEllipseElement>("ellipse").node()!); // WARNING* ! used
 
       // start from the starting point of the curve and in direction of the negative gradient
@@ -285,7 +309,7 @@ export class DotGraphViz extends HTMLElement {
 
     if (toNode) {
       // the node where the edge ends at
-      const toEllipse = asEllipse(d3.select(toNode)
+      const toEllipse = asEllipse(select(toNode)
         .selectChild<SVGEllipseElement>("ellipse").node()!);
 
       const headRay: Ray = {
@@ -359,12 +383,12 @@ export class DotGraphViz extends HTMLElement {
     return minimized.node()!; // I just created it so its node() must be non-null
   }
 
-  handleZoom = (event: d3.D3ZoomEvent<SVGSVGElement, unknown>) => {
+  handleZoom = (event: D3ZoomEvent<SVGSVGElement, unknown>) => {
     if (!this.svgg)
       return;
 
     // attach the zoom transform after the initial translation
-    d3.select(this.svgg).attr("transform", event.transform.toString() + " " + this.initTransform);
+    select(this.svgg).attr("transform", event.transform.toString() + " " + this.initTransform);
 
     const zoomLevel = event.transform.k > ZOOM_LEVEL_THRESHOLD ? "ZoomIn" : "ZoomOut";
 
@@ -380,7 +404,7 @@ export class DotGraphViz extends HTMLElement {
       // remove minimizable objects rendered as the previous zoom level
 
       if (prevZoomLevel) {
-        d3.select(edge[prevZoomLevel]).remove();
+        select(edge[prevZoomLevel]).remove();
       }
       // add minimizable objects for the current zoom level
       if (edge[zoomLevel]) {
@@ -392,7 +416,7 @@ export class DotGraphViz extends HTMLElement {
       // remove minimizable objects rendered as the previous zoom level
 
       if (prevZoomLevel) {
-        d3.select(node[prevZoomLevel]).remove();
+        select(node[prevZoomLevel]).remove();
       }
       // add minimizable objects for the current zoom level
       if (node[zoomLevel]) {
@@ -408,7 +432,7 @@ export class DotGraphViz extends HTMLElement {
     if (!this.graph)
       return;
 
-    const nodeElementId = d3.select(event.currentTarget as HTMLElement).attr("id");
+    const nodeElementId = select(event.currentTarget as HTMLElement).attr("id");
     this.highlightConnections = this.graph.getConnections(this.graph.reverseLookup.nodes[nodeElementId]);
 
     this.highlight();
@@ -436,15 +460,15 @@ export class DotGraphViz extends HTMLElement {
     this.clearHighlight();
 
     // add new highlight
-    d3.select(this.svgg).classed("highlighted", true);
+    select(this.svgg).classed("highlighted", true);
 
     for (const nodeId of this.highlightConnections.nodes) {
-      d3.select("#" + this.graph.nodes[nodeId].elementId)
+      select("#" + this.graph.nodes[nodeId].elementId)
         .classed("active", true);
     }
 
     for (const edgeId of this.highlightConnections.edges) {
-      d3.select("#" + this.graph.edges[edgeId].elementId)
+      select("#" + this.graph.edges[edgeId].elementId)
         .classed("active", true);
     }
   }
@@ -453,7 +477,7 @@ export class DotGraphViz extends HTMLElement {
     if (!this.svgg)
       return;
 
-    const g = d3.select(this.svgg).classed("highlighted", false);
+    const g = select(this.svgg).classed("highlighted", false);
 
     g.selectChildren(GRAPH_NODE_SELECTOR)
       .classed("active", false);
