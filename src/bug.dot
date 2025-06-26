@@ -5,6 +5,6 @@ node[fontsize="8",fontname="Helvetica",width="0.3",height="0.2"];
 edge[fontsize="8",fontname="Helvetica"];
 n4[shape="record",label="{{<n0> Fr( ~ltk.4 )}|{<n1> #vr.3 : Register_pk}|{<n2> !Ltk( $A.4, ~ltk.4 )|<n3> !Pk( $A.4, pk(~ltk.4) )}}",fillcolor="#d5d897",style="filled",fontcolor="black",role="Undefined"];
 n5[label="(#i, 0)",shape="invtrapezium"];
-n4:n3 -> n5[style="bold",weight="10.0",color="gray50"];
+n4:n2 -> n5[style="bold",weight="10.0",color="gray50"];
 
 }

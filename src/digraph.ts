@@ -94,7 +94,7 @@ export class DiGraph {
         );
 
         // extract edges
-        this.edges = vizGraph.edges.filter(e => e.style !== "invis")
+        this.edges = (vizGraph.edges ?? []).filter(e => e.style !== "invis")
             .reduce((acc, cur) => {
                 const fromNodeId = cur.tail.toString();
                 const toNodeId = cur.head.toString();

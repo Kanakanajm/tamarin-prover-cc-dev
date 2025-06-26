@@ -23,7 +23,7 @@ export interface VizObjectDraw {
 export type VizObjectDrawOp = "F" | "c" | "T" | "S" | "p"
 
 export interface VizGraph {
-    edges: VizEdge[]
+    edges?: VizEdge[]
     objects: VizObject[]
 }
 
