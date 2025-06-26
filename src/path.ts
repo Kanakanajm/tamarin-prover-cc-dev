@@ -56,7 +56,7 @@ export function extendCurvePath(d: string, start?: Vec2, end?: Vec2): string {
     const cIndex = d.indexOf("C");
     if (cIndex === -1) {
         // no curve, return the original path
-        console.error("No curve found in the path, cannot construct new path");
+        console.error(`No curve found in the path ${d}, cannot construct new path`);
         return d;
     }
     let newD = d;

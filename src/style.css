@@ -1,5 +1,4 @@
-g.node.record,
-g.node.ellipse {
+g.node.clickable {
   cursor: pointer;
 }
 
@@ -18,4 +17,9 @@ text.abbrev {
 text.abbrev:hover {
   text-decoration: underline;
   fill: blue;
+}
+
+dot-graph-viz,
+dot-graph-viz>svg {
+  width: 100%;
 }

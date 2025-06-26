@@ -158,13 +158,16 @@ export class DotGraphViz extends HTMLElement {
       select(this.svg).call(zoomBehavior);
 
       // register onclick highlight event
-      select(this.svgg).selectAll<SVGGElement, unknown>(GRAPH_NODE_SELECTOR).on("click", this.handleNodeClick)
+      for (const node of Object.values(this.graph.nodes)) {
+        select("#" + node.elementId)
+          .classed("clickable", true).on("click", this.handleNodeClick)
+      }
 
       // register clear highlight event
       document.addEventListener("click", (event: MouseEvent) => {
         const target = event.target as HTMLElement;
         // only clear when click on area that is not a node
-        if (!target.closest(GRAPH_NODE_SELECTOR) && !target.closest("text.abbrev")) {
+        if (!target.closest(this.getNodeSelector()) && !target.closest("text.abbrev")) {
           this.clearHighlight();
           this.highlightConnections = null;
           window.getSelection()?.removeAllRanges();
@@ -236,7 +239,7 @@ export class DotGraphViz extends HTMLElement {
 
     const minimized = create<SVGGElement>("svg:g")
       .attr("id", g.getAttribute("id"))
-      .attr("class", "node record mini")
+      .attr("class", "node clickable mini")
       .on("click", this.handleNodeClick);
 
     minimized.append("title")
@@ -280,7 +283,7 @@ export class DotGraphViz extends HTMLElement {
     const oldCurve = getCubicBezierCurve(edgePath);
     const [oldTailGrad, oldHeadGrad] = getCubicBezierCurveGradients(oldCurve);
 
-    let isTailReprojected = false;
+    // let isTailReprojected = false;
 
     if (fromNode) {
       // the node where the edge starts from
@@ -301,9 +304,9 @@ export class DotGraphViz extends HTMLElement {
         edgePath = extendCurvePath(edgePath, traverse(tailRay, tailIts));
       }
       else {
-        isTailReprojected = true;
+        // isTailReprojected = true;
         const tailProj = project(oldCurve.start, fromEllipse);
-        edgePath = `M${print2f(tailProj)}L${print2f(oldCurve.end)}`;
+        edgePath = extendCurvePath(edgePath, tailProj);
       }
     }
 
@@ -329,17 +332,23 @@ export class DotGraphViz extends HTMLElement {
       else {
         const headProj = project(oldCurve.end, toEllipse);
         headItsPoint = headProj;
-
-        if (isTailReprojected) {
-          throw new Error("Not implemented yet")
-        } else {
-          const projHeadRay: Ray = {
-            o: headProj,
-            d: direction(headProj, oldCurve.start)
-          }
-          edgePath = `M${print2f(oldCurve.start)}L${print2f(traverse(projHeadRay, arrowHeadRealHeight))}`;
-          headDirection = projHeadRay.d;
+        const projHeadRay: Ray = {
+          o: headProj,
+          d: direction(headProj, oldCurve.start)
         }
+        headDirection = projHeadRay.d;
+        edgePath = extendCurvePath(edgePath, undefined, traverse(projHeadRay, arrowHeadRealHeight));
+
+        // if (isTailReprojected) {
+        //   throw new Error("Not implemented yet")
+        // } else {
+        // const projHeadRay: Ray = {
+        //   o: headProj,
+        //   d: direction(headProj, oldCurve.start)
+        // }
+        //   edgePath = `M${print2f(oldCurve.start)}L${print2f(traverse(projHeadRay, arrowHeadRealHeight))}`;
+        //   headDirection = projHeadRay.d;
+        // }
 
       }
       // add new arrow head
@@ -479,11 +488,12 @@ export class DotGraphViz extends HTMLElement {
 
     const g = select(this.svgg).classed("highlighted", false);
 
-    g.selectChildren(GRAPH_NODE_SELECTOR)
+    g.selectChildren("g.active")
       .classed("active", false);
+  };
 
-    g.selectChildren("g.edge")
-      .classed("active", false);
+  getNodeSelector = () => {
+    return Object.values(this.graph?.nodes ?? {}).map(n => "#" + n.elementId).join(",");
   }
 }
 
