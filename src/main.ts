@@ -5,7 +5,6 @@ import { calculateCentroid, calculateEllipseRadii, cross, direction, dot, Ellips
 import { VizGraph } from "./viz";
 import { DiGraph, DiGraphConnections } from "./digraph";
 import './style.css';
-// import dotString from "./bug.dot?raw"
 
 const ZOOM_LEVEL_THRESHOLD = 0.99;
 const ARROW_HEAD_WIDTH = 7;
@@ -102,22 +101,19 @@ export class DotGraphViz extends HTMLElement {
 
   connectedCallback() {
     instance().then(async viz => {
-      const dotsrc = this.getAttribute("dotsrc");
-      if (!dotsrc) {
-        console.error("No dot graph source url provided.");
-        return;
+
+      let dotString: string | null | undefined = null;
+      // 
+      if (import.meta.env.PROD) {
+        dotString = await this.fetchDotString();
       }
-      const res = await fetch(dotsrc);
-      if (!res.ok) {
-        console.error("Failed to fetch dot graph definition.");
-        return;
+      else {
+        dotString = await this.loadDotStringFromFile();
       }
 
-      const dotString = await res.text();
-      if (!dotString || !dotString.includes("digraph")) {
-        console.error("Invalid dot graph string");
-        return;
-      }
+      if (!dotString) return; // dot string failed to load
+
+
 
       console.debug("Received dot string");
       console.debug(dotString);
@@ -195,6 +191,34 @@ export class DotGraphViz extends HTMLElement {
       }
     });
   }
+
+  loadDotStringFromFile = async (): Promise<string | undefined> => {
+    const res = await fetch('/example.dot');
+    const text = await res.text();
+    return text;
+  };
+
+  fetchDotString = async (): Promise<string | undefined> => {
+    const dotsrc = this.getAttribute("dotsrc");
+    if (!dotsrc) {
+      console.error("No dot graph source url provided.");
+      return;
+    }
+    const res = await fetch(dotsrc);
+    if (!res.ok) {
+      console.error("Failed to fetch dot graph definition.");
+      return;
+    }
+
+    const dotString = await res.text();
+    if (!dotString || !dotString.includes("digraph")) {
+      console.error("Invalid dot graph string");
+      return;
+    }
+
+    return dotString;
+  }
+
   constructMinimizableObjects = () => {
     if (!this.graph || !this.svgg)
       return;
