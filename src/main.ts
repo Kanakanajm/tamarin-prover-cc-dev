@@ -67,6 +67,7 @@ type MinimizableObject = { [key in ZoomLevel]: SVGGElement | null };
 
 export class DotGraphViz extends HTMLElement {
   isPopup?: boolean;
+  channel: BroadcastChannel;
   dotSrc?: string | null;
 
   json?: VizGraph;
@@ -95,6 +96,7 @@ export class DotGraphViz extends HTMLElement {
 
   constructor() {
     super();
+    this.channel = new BroadcastChannel("dot-graph-viz-popup");
   }
 
   // what to do when observed attributes changed 
@@ -197,7 +199,6 @@ export class DotGraphViz extends HTMLElement {
 
       // if component is used in a normal page (theory overview)
       if (!this.isPopup) {
-
         // popup button
         const popupBtn = document.createElement("button");
         popupBtn.textContent = "Popup";
@@ -206,20 +207,19 @@ export class DotGraphViz extends HTMLElement {
         this.appendChild(popupBtn);
 
         // when popup is closed
-        window.addEventListener("message", (event) => {
+        this.channel.onmessage = (event) => {
           if (event.data === "popup-closed") {
             // refresh
             window.location.reload();
           }
-        })
+        };
+
       }
       else // if component is a popup
       {
         window.addEventListener("beforeunload", () => {
-          // notice the opener that popup is closed
-          if (window.opener && !window.opener.closed) {
-            window.opener.postMessage("popup-closed", '*');
-          }
+          // notice that popup is closed
+          this.channel.postMessage('popup-closed');
         });
       }
     });
@@ -228,6 +228,7 @@ export class DotGraphViz extends HTMLElement {
   handlePopupClick = () => {
     const popup = window.open(window.location.href + "?graph_only", undefined, "popup=true");
     if (popup) {
+      // after popup open successfully,
       // remove all children (the whole graph)
       this.innerHTML = "";
 
@@ -243,19 +244,19 @@ export class DotGraphViz extends HTMLElement {
       // a hacky way of syncing url changes
       // by intercepting the click event on the navigation links
       // and use history.pushState(...) to navigate in a more controlled way 
-      document.getElementById("proof")?.addEventListener("click", (event) => {
-        const target = event.target;
-        if (target) {
-          const targetEl = target as HTMLElement;
-          const link = targetEl.closest("a.proof-step");
-          if (link) {
-            const linkEl = link as HTMLAnchorElement;
-            event.preventDefault();
-            history.pushState({}, '', linkEl.href);
-            popup.location.href = linkEl.href + "?graph_only";
-          }
-        }
-      });
+      // document.getElementById("proof")?.addEventListener("click", (event) => {
+      //   const target = event.target;
+      //   if (target) {
+      //     const targetEl = target as HTMLElement;
+      //     const link = targetEl.closest("a.proof-step");
+      //     if (link) {
+      //       const linkEl = link as HTMLAnchorElement;
+      //       event.preventDefault();
+      //       history.pushState({}, '', linkEl.href);
+      //       popup.location.href = linkEl.href + "?graph_only";
+      //     }
+      //   }
+      // });
 
     } else {
       console.error("Failed to open popup!");
