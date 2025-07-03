@@ -70,6 +70,7 @@ type MinimizableObject = { [key in ZoomLevel]: SVGGElement | null };
 
 export class DotGraphViz extends HTMLElement {
   isPopup?: boolean;
+  canPopup?: boolean;
   channel: BroadcastChannel;
   dotSrc?: string | null;
   lastPath: string;
@@ -112,6 +113,8 @@ export class DotGraphViz extends HTMLElement {
    */
   getAttributes = () => {
     this.dotSrc = this.getAttribute("dotsrc");
+    if (this.dotSrc)
+      console.debug("Received dot graph URL", this.dotSrc);
   }
 
   connectedCallback() {
@@ -120,6 +123,7 @@ export class DotGraphViz extends HTMLElement {
       this.getAttributes();
       const params = new URLSearchParams(window.location.search);
       this.isPopup = params.has("graph_only");
+      this.canPopup = !window.location.href.includes("/cases/raw") && !window.location.href.includes("/cases/refined")
 
 
       const dotString = import.meta.env.PROD ?
@@ -220,7 +224,7 @@ export class DotGraphViz extends HTMLElement {
       }
 
       // if component is used in a normal page (theory overview)
-      if (!this.isPopup) {
+      if (!this.isPopup && this.canPopup) {
         // popup button
         const popupBtn = document.createElement("button");
         popupBtn.textContent = "Popup";
