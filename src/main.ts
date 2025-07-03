@@ -208,21 +208,55 @@ export class DotGraphViz extends HTMLElement {
 
         // when popup is closed
         this.channel.onmessage = (event) => {
-          if (event.data === "popup-closed") {
-            // refresh
-            window.location.reload();
+          switch (event.data.type) {
+            case "popup-closed":
+              window.location.reload();
+              break;
+            case "pong":
+              // popup is still open 
+              this.handlePopupOpenContentChange();
+              break;
           }
         };
-
+        // initial ping
+        this.channel.postMessage({ type: 'ping' });
       }
       else // if component is a popup
       {
         window.addEventListener("beforeunload", () => {
           // notice that popup is closed
-          this.channel.postMessage('popup-closed');
+          this.channel.postMessage({ type: 'popup-closed' });
         });
+
+        // respond to host pings
+        this.channel.onmessage = (event) => {
+          switch (event.data.type) {
+            case "ping":
+              this.channel.postMessage({ type: "pong" });
+              break;
+            case "close-popup":
+              window.close();
+              break;
+            case "change-url":
+              window.history.pushState({}, '', event.data.payload);
+
+          }
+        };
       }
     });
+  }
+
+  handlePopupOpenContentChange = () => {
+    this.innerHTML = "";
+
+    // close popup button
+    const closePopupBtn = document.createElement("button");
+    closePopupBtn.textContent = "Close Popup";
+    closePopupBtn.id = "close-popup-btn";
+    closePopupBtn.addEventListener("click", () => {
+      this.channel.postMessage({ type: "close-popup" });
+    });
+    this.appendChild(closePopupBtn);
   }
 
   handlePopupClick = () => {
@@ -230,33 +264,26 @@ export class DotGraphViz extends HTMLElement {
     if (popup) {
       // after popup open successfully,
       // remove all children (the whole graph)
-      this.innerHTML = "";
-
-      // close popup button
-      const closePopupBtn = document.createElement("button");
-      closePopupBtn.textContent = "Close Popup";
-      closePopupBtn.id = "close-popup-btn";
-      closePopupBtn.addEventListener("click", () => {
-        popup.close();
-      });
-      this.appendChild(closePopupBtn);
+      this.handlePopupOpenContentChange();
 
       // a hacky way of syncing url changes
       // by intercepting the click event on the navigation links
       // and use history.pushState(...) to navigate in a more controlled way 
-      // document.getElementById("proof")?.addEventListener("click", (event) => {
-      //   const target = event.target;
-      //   if (target) {
-      //     const targetEl = target as HTMLElement;
-      //     const link = targetEl.closest("a.proof-step");
-      //     if (link) {
-      //       const linkEl = link as HTMLAnchorElement;
-      //       event.preventDefault();
-      //       history.pushState({}, '', linkEl.href);
-      //       popup.location.href = linkEl.href + "?graph_only";
-      //     }
-      //   }
-      // });
+      document.getElementById("proof")?.addEventListener("click", (event) => {
+        const target = event.target;
+        if (target) {
+          const targetEl = target as HTMLElement;
+          const link = targetEl.closest("a.proof-step");
+          if (link) {
+            const linkEl = link as HTMLAnchorElement;
+            event.preventDefault();
+            const newUrl = linkEl.href.replace("/main/", "/overview/");
+            history.pushState({}, '', newUrl);
+            this.channel.postMessage({ type: "change-url", payload: newUrl + "?graph_only" });
+
+          }
+        }
+      });
 
     } else {
       console.error("Failed to open popup!");
