@@ -58,6 +58,9 @@ function getTitleText(g: SVGGElement): string {
   return select<SVGGElement, unknown>(g).selectChild<SVGTitleElement>("title").text();
 }
 
+function constructGraphOnlyUrl(url: string): string {
+  return url + (url.includes('?') ? '&' : '?') + 'graph_only';
+}
 
 
 
@@ -268,7 +271,7 @@ export class DotGraphViz extends HTMLElement {
             case "current-url":
               if (this.lastPath !== event.data.payload.path) {
                 this.lastPath = event.data.payload.path;
-                window.location.href = event.data.payload.url + (event.data.payload.url.includes('?') ? '&' : '?') + 'graph_only';
+                window.location.href = constructGraphOnlyUrl(event.data.payload.url);
               }
               break;
 
@@ -302,7 +305,7 @@ export class DotGraphViz extends HTMLElement {
   }
 
   handlePopupClick = () => {
-    const popup = window.open(window.location.href + "?graph_only", undefined, "popup=true");
+    const popup = window.open(constructGraphOnlyUrl(window.location.href), undefined, "popup=true");
     if (popup) {
       // after popup open successfully,
       // remove all children (the whole graph)
