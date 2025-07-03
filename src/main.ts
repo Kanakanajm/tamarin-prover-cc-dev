@@ -481,9 +481,10 @@ export class DotGraphViz extends HTMLElement {
       else {
         const headProj = project(oldCurve.end, toEllipse);
         headItsPoint = headProj;
+        // from the projection point to the old curve end
         const projHeadRay: Ray = {
           o: headProj,
-          d: direction(headProj, oldCurve.start)
+          d: direction(headProj, oldCurve.end)
         }
         headDirection = projHeadRay.d;
         edgePath = extendCurvePath(edgePath, undefined, traverse(projHeadRay, arrowHeadRealHeight));
