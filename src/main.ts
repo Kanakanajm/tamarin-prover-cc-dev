@@ -66,7 +66,8 @@ function getTitleText(g: SVGGElement): string {
 type MinimizableObject = { [key in ZoomLevel]: SVGGElement | null };
 
 export class DotGraphViz extends HTMLElement {
-  static observedAttributes = ["dotsrc"];
+  isPopup?: boolean;
+  dotSrc?: string | null;
 
   json?: VizGraph;
   graph?: DiGraph;
@@ -99,21 +100,26 @@ export class DotGraphViz extends HTMLElement {
   // what to do when observed attributes changed 
   // attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null) {}
 
+  /**
+   * load attributes when connected
+   */
+  getAttributes = () => {
+    this.dotSrc = this.getAttribute("dotsrc");
+  }
+
   connectedCallback() {
     instance().then(async viz => {
 
-      let dotString: string | null | undefined = null;
-      // 
-      if (import.meta.env.PROD) {
-        dotString = await this.fetchDotString();
-      }
-      else {
-        dotString = await this.loadDotStringFromFile();
-      }
+      this.getAttributes();
+      const params = new URLSearchParams(window.location.search);
+      this.isPopup = params.has("graph_only");
+
+
+      const dotString = import.meta.env.PROD ?
+        await this.fetchDotString() :
+        await this.loadDotStringFromFile();
 
       if (!dotString) return; // dot string failed to load
-
-
 
       console.debug("Received dot string");
       console.debug(dotString);
@@ -141,9 +147,9 @@ export class DotGraphViz extends HTMLElement {
           event.stopPropagation();
         });
 
-      // extract and compute zoom level dependent shape for minimizable objects
-
       this.svgg = select(this.svg).selectChild<SVGGElement>("g").node();
+
+      // extract and compute zoom level dependent shape for minimizable objects
       this.constructMinimizableObjects();
 
       // get initial translation transform
@@ -177,7 +183,6 @@ export class DotGraphViz extends HTMLElement {
 
       // add abbreviation text click handler
       if (this.graph.abbrev.elementId) {
-
         const abbrevs = Object.keys(this.graph.abbrev.abbreviations);
         select(this.svgg)
           .selectChild("#" + this.graph.abbrev.elementId)
@@ -189,7 +194,72 @@ export class DotGraphViz extends HTMLElement {
           .classed("abbrev", true)
           .on("click", this.handleAbbreviationTextClick);
       }
+
+      // if component is used in a normal page (theory overview)
+      if (!this.isPopup) {
+
+        // popup button
+        const popupBtn = document.createElement("button");
+        popupBtn.textContent = "Popup";
+        popupBtn.id = "popup-btn";
+        popupBtn.addEventListener("click", this.handlePopupClick);
+        this.appendChild(popupBtn);
+
+        // when popup is closed
+        window.addEventListener("message", (event) => {
+          if (event.data === "popup-closed") {
+            // refresh
+            window.location.reload();
+          }
+        })
+      }
+      else // if component is a popup
+      {
+        window.addEventListener("beforeunload", () => {
+          // notice the opener that popup is closed
+          if (window.opener && !window.opener.closed) {
+            window.opener.postMessage("popup-closed", '*');
+          }
+        });
+      }
     });
+  }
+
+  handlePopupClick = () => {
+    const popup = window.open(window.location.href + "?graph_only", undefined, "popup=true");
+    if (popup) {
+      // remove all children (the whole graph)
+      this.innerHTML = "";
+
+      // close popup button
+      const closePopupBtn = document.createElement("button");
+      closePopupBtn.textContent = "Close Popup";
+      closePopupBtn.id = "close-popup-btn";
+      closePopupBtn.addEventListener("click", () => {
+        popup.close();
+      });
+      this.appendChild(closePopupBtn);
+
+      // a hacky way of syncing url changes
+      // by intercepting the click event on the navigation links
+      // and use history.pushState(...) to navigate in a more controlled way 
+      document.getElementById("proof")?.addEventListener("click", (event) => {
+        const target = event.target;
+        if (target) {
+          const targetEl = target as HTMLElement;
+          const link = targetEl.closest("a.proof-step");
+          if (link) {
+            const linkEl = link as HTMLAnchorElement;
+            event.preventDefault();
+            history.pushState({}, '', linkEl.href);
+            popup.location.href = linkEl.href + "?graph_only";
+          }
+        }
+      });
+
+    } else {
+      console.error("Failed to open popup!");
+    }
   }
 
   loadDotStringFromFile = async (): Promise<string | undefined> => {
@@ -199,12 +269,11 @@ export class DotGraphViz extends HTMLElement {
   };
 
   fetchDotString = async (): Promise<string | undefined> => {
-    const dotsrc = this.getAttribute("dotsrc");
-    if (!dotsrc) {
+    if (!this.dotSrc) {
       console.error("No dot graph source url provided.");
       return;
     }
-    const res = await fetch(dotsrc);
+    const res = await fetch(this.dotSrc);
     if (!res.ok) {
       console.error("Failed to fetch dot graph definition.");
       return;

@@ -9,7 +9,13 @@
 </head>
 
 <body>
-  <dot-graph-viz />
+  <dot-graph-viz canpop="true" />
+  <!-- This is a hacky simulation for syncing proof step url with popups -->
+  <div id="proof">
+    <a class="internal-link proof-step hl_good" href="/step1"><span class="hl_keyword">Step1</span></a>
+    <br />
+    <a class="internal-link proof-step hl_good" href="/step2"><span class="hl_keyword">Step2</span></a>
+  </div>
   <script type="module" src="/src/main.ts"></script>
 </body>
 
