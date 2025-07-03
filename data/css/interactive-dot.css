@@ -1,1 +1,1 @@
-g.node.clickable{cursor:pointer}g.highlighted>g.active{opacity:1}g.highlighted>g:not(.active):not(.abbrev-table){opacity:.2}text.abbrev{cursor:pointer}text.abbrev:hover{text-decoration:underline;fill:#00f}dot-graph-viz,dot-graph-viz>svg{width:100%}
+g.node.clickable{cursor:pointer}g.highlighted>g.active{opacity:1}g.highlighted>g:not(.active):not(.abbrev-table){opacity:.2}text.abbrev{cursor:pointer}text.abbrev:hover{text-decoration:underline;fill:#00f}dot-graph-viz,dot-graph-viz>svg{width:100%;height:100%;display:block}dot-graph-viz.popup{width:100%;height:95vh}

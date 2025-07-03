@@ -121,7 +121,6 @@ import           Theory.Constraint.System.Graph.Graph
 import           Theory.Constraint.System.Dot (BoringNodeStyle, dotSystemCompact, doNodeStyle)
 
 import           Data.Text (Text)
-
 -- Quasi-quotation syntax changed from GHC 6 to 7,
 -- so we need this switch in order to support both
 #if __GLASGOW_HASKELL__ >= 700
@@ -535,12 +534,22 @@ getOverviewR :: TheoryIdx -> TheoryPath -> Handler Html
 getOverviewR idx path = withTheory idx ( \ti -> do
   renderF <- getUrlRender
   renderParamsF <- getUrlRenderParams
-  defaultLayout $ do
-    getParams <- reqGetParams <$> getRequest
-    let renderParamsF' route = renderParamsF route getParams
-    overview <- liftIO $ overviewTpl renderF renderParamsF' ti path
-    setTitle (toHtml $ "Theory: " ++ get thyName (tiTheory ti))
-    overview )
+  getParams <- reqGetParams <$> getRequest
+  let graphOnlyMaybe = lookup "graph_only" getParams :: Maybe Text
+  case graphOnlyMaybe of 
+    Just graphOnly -> defaultLayout $ do 
+      setTitle (toHtml $ "Theory: " ++ get thyName (tiTheory ti))
+      toWidget
+        [hamlet|
+            <dot-graph-viz dotsrc="#{imgPath}" popup="true">
+        |]
+      where
+      imgPath = T.unpack $ renderF (TheoryGraphR idx path)
+    Nothing -> defaultLayout $ do
+      let renderParamsF' route = renderParamsF route getParams
+      overview <- liftIO $ overviewTpl renderF renderParamsF' ti path
+      setTitle (toHtml $ "Theory: " ++ get thyName (tiTheory ti))
+      overview )
 
 -- | Show overview over diff theory (framed layout).
 getOverviewDiffR :: TheoryIdx -> DiffTheoryPath -> Handler Html
