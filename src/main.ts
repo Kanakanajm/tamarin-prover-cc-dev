@@ -188,15 +188,32 @@ export class DotGraphViz extends HTMLElement {
       // add abbreviation text click handler
       if (this.graph.abbrev.elementId) {
         const abbrevs = Object.keys(this.graph.abbrev.abbreviations);
-        select(this.svgg)
-          .selectChild("#" + this.graph.abbrev.elementId)
-          .classed("abbrev-table", true)
+        const abbrevTbl = select(this.svgg)
+          .selectChild<SVGGElement>("#" + this.graph.abbrev.elementId)
+          .classed("abbrev-table", true);
+
+        abbrevTbl
           .selectChildren<SVGTextElement, unknown>("text")
           .filter(function () {
             return abbrevs.includes(this.textContent || "");
           })
           .classed("abbrev", true)
           .on("click", this.handleAbbreviationTextClick);
+
+        const abbrevTblEl = abbrevTbl.node()!;
+        const abbrevTblElBBox = abbrevTblEl.getBBox();
+        const graphBBox = this.svgg!.getBBox();
+        const marginX = 10;
+        const marginY = 10;
+        const dx = graphBBox.x + graphBBox.width - abbrevTblElBBox.width - abbrevTblElBBox.x - marginX;
+        const dy = graphBBox.y + graphBBox.height - abbrevTblElBBox.height - abbrevTblElBBox.y - marginY;
+
+        abbrevTbl
+          .attr("transform", this.initTransform + ` translate(${dx} ${dy})`);
+
+        abbrevTbl.remove();
+        this.svg.appendChild(abbrevTblEl);
+
       }
 
       // if component is used in a normal page (theory overview)
@@ -233,6 +250,7 @@ export class DotGraphViz extends HTMLElement {
       }
       else // if component is a popup
       {
+        this.classList.add("popup");
         window.addEventListener("beforeunload", () => {
           // notice that popup is closed
           this.channel.postMessage({ type: 'popup-closed' });

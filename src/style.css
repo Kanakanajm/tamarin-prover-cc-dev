@@ -22,4 +22,11 @@ text.abbrev:hover {
 dot-graph-viz,
 dot-graph-viz>svg {
   width: 100%;
+  height: 100%;
+  display: block;
+}
+
+dot-graph-viz.popup {
+  width: 100%;
+  height: 95vh;
 }
