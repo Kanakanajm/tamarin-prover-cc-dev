@@ -58,7 +58,7 @@ export class DiGraph {
 
     //extract abbreviations
     constructor(vizGraph: VizGraph, svg: SVGSVGElement) {
-        const abbrevObj = vizGraph.objects.find(n => n.shape === "plain");
+        const abbrevObj = (vizGraph.objects ?? []).find(n => n.shape === "plain");
         if (abbrevObj) {
             // find abbreviation table's element id
             this.abbrev.elementId = findGElementIdByTitle(svg, abbrevObj.name);
@@ -72,7 +72,7 @@ export class DiGraph {
 
 
         // extract nodes
-        this.nodes = vizGraph.objects.filter(n =>
+        this.nodes = (vizGraph.objects ?? []).filter(n =>
             n.shape === "ellipse" ||
             n.shape === "record" ||
             n.shape === "invtrapezium" ||

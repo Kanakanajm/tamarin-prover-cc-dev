@@ -69,6 +69,7 @@ export class DotGraphViz extends HTMLElement {
   isPopup?: boolean;
   channel: BroadcastChannel;
   dotSrc?: string | null;
+  lastPath: string;
 
   json?: VizGraph;
   graph?: DiGraph;
@@ -97,6 +98,7 @@ export class DotGraphViz extends HTMLElement {
   constructor() {
     super();
     this.channel = new BroadcastChannel("dot-graph-viz-popup");
+    this.lastPath = window.location.origin + window.location.pathname; // url on open
   }
 
   // what to do when observed attributes changed 
@@ -216,6 +218,14 @@ export class DotGraphViz extends HTMLElement {
               // popup is still open 
               this.handlePopupOpenContentChange();
               break;
+            case "request-url":
+              this.channel.postMessage({
+                type: 'current-url', payload: {
+                  path: window.location.origin + window.location.pathname,
+                  url: window.location.href
+                }
+              });
+              break;
           }
         };
         // initial ping
@@ -237,12 +247,26 @@ export class DotGraphViz extends HTMLElement {
             case "close-popup":
               window.close();
               break;
-            case "change-url":
-              window.history.pushState({}, '', event.data.payload);
+            case "current-url":
+              if (this.lastPath !== event.data.payload.path) {
+                this.lastPath = event.data.payload.path;
+                window.location.href = event.data.payload.url + (event.data.payload.url.includes('?') ? '&' : '?') + 'graph_only';
+              }
+              break;
 
           }
         };
+
+        // a hacky way of syncing url changes
+        // by asking host to give its url
+        setInterval(() => {
+          this.channel.postMessage({
+            type: 'request-url'
+          });
+        }, 200); // check every 200ms
+
       }
+
     });
   }
 
@@ -265,25 +289,6 @@ export class DotGraphViz extends HTMLElement {
       // after popup open successfully,
       // remove all children (the whole graph)
       this.handlePopupOpenContentChange();
-
-      // a hacky way of syncing url changes
-      // by intercepting the click event on the navigation links
-      // and use history.pushState(...) to navigate in a more controlled way 
-      document.getElementById("proof")?.addEventListener("click", (event) => {
-        const target = event.target;
-        if (target) {
-          const targetEl = target as HTMLElement;
-          const link = targetEl.closest("a.proof-step");
-          if (link) {
-            const linkEl = link as HTMLAnchorElement;
-            event.preventDefault();
-            const newUrl = linkEl.href.replace("/main/", "/overview/");
-            history.pushState({}, '', newUrl);
-            this.channel.postMessage({ type: "change-url", payload: newUrl + "?graph_only" });
-
-          }
-        }
-      });
 
     } else {
       console.error("Failed to open popup!");
