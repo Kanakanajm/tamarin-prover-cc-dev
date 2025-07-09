@@ -151,15 +151,10 @@ export class DotGraphViz extends HTMLElement {
 
       // Allow selecting/copying text elements with the mouse 
       selectAll("text")
-        .style("user-select", "text")
-        .style("pointer-events", "all")
         .style("cursor", "text")
         .on("mousedown", function (event) {
           event.stopPropagation();
         })
-        .on("dblclick", function (event) {
-          event.stopPropagation();
-        });
 
       this.svgg = select(this.svg).selectChild<SVGGElement>("g").node();
 
@@ -218,8 +213,17 @@ export class DotGraphViz extends HTMLElement {
         const dx = graphBBox.x + graphBBox.width - abbrevTblElBBox.width - abbrevTblElBBox.x - marginX;
         const dy = graphBBox.y + graphBBox.height - abbrevTblElBBox.height - abbrevTblElBBox.y - marginY;
 
+        // inserting a rect box before the text 
+        // reference: https://d3js.org/d3-selection/modifying#selection_insert
+        abbrevTbl.insert("rect","text" )
+        .attr("width", abbrevTblElBBox.width)
+        .attr("height", abbrevTblElBBox.height)
+        .attr("x", abbrevTblElBBox.x)
+        .attr("y", abbrevTblElBBox.y)
+        .attr("fill", "white");
+
         abbrevTbl
-          .attr("transform", this.initTransform + ` translate(${dx} ${dy})`);
+          .attr("transform", this.initTransform + ` translate(${dx} ${dy})`)
 
         abbrevTbl.remove();
         this.svg.appendChild(abbrevTblEl);
@@ -230,7 +234,7 @@ export class DotGraphViz extends HTMLElement {
       if (!this.isPopup && this.canPopup) {
         // popup button
         const popupBtn = document.createElement("button");
-        popupBtn.textContent = "Popup";
+        popupBtn.textContent = "Pop-out";
         popupBtn.id = "popup-btn";
         popupBtn.addEventListener("click", this.handlePopupClick);
         this.appendChild(popupBtn);
@@ -303,7 +307,7 @@ export class DotGraphViz extends HTMLElement {
 
     // close popup button
     const closePopupBtn = document.createElement("button");
-    closePopupBtn.textContent = "Close Popup";
+    closePopupBtn.textContent = "Pop-in";
     closePopupBtn.id = "close-popup-btn";
     closePopupBtn.addEventListener("click", () => {
       this.channel.postMessage({ type: "close-popup" });
