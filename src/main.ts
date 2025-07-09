@@ -121,7 +121,13 @@ export class DotGraphViz extends HTMLElement {
   }
 
   connectedCallback() {
+    this.render();
+  }
+
+  render = () => {
     instance().then(async viz => {
+      // clear children
+      this.innerHTML = "";
 
       this.getAttributes();
       const params = new URLSearchParams(window.location.search);
@@ -215,12 +221,12 @@ export class DotGraphViz extends HTMLElement {
 
         // inserting a rect box before the text 
         // reference: https://d3js.org/d3-selection/modifying#selection_insert
-        abbrevTbl.insert("rect","text" )
-        .attr("width", abbrevTblElBBox.width)
-        .attr("height", abbrevTblElBBox.height)
-        .attr("x", abbrevTblElBBox.x)
-        .attr("y", abbrevTblElBBox.y)
-        .attr("fill", "white");
+        abbrevTbl.insert("rect", "text")
+          .attr("width", abbrevTblElBBox.width)
+          .attr("height", abbrevTblElBBox.height)
+          .attr("x", abbrevTblElBBox.x)
+          .attr("y", abbrevTblElBBox.y)
+          .attr("fill", "white");
 
         abbrevTbl
           .attr("transform", this.initTransform + ` translate(${dx} ${dy})`)
