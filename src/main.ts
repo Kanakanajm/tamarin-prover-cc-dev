@@ -75,8 +75,8 @@ export class DotGraphViz extends HTMLElement {
   isPopup?: boolean;
   canPopup?: boolean;
   channel: BroadcastChannel;
+  href: string;
   dotSrc?: string | null;
-  lastPath: string;
 
   json?: VizGraph;
   graph?: DiGraph;
@@ -105,51 +105,44 @@ export class DotGraphViz extends HTMLElement {
   constructor() {
     super();
     this.channel = new BroadcastChannel("dot-graph-viz-popup");
-    this.lastPath = window.location.origin + window.location.pathname; // url on open
-  }
-
-  // what to do when observed attributes changed 
-  // attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null) {}
-
-  /**
-   * load attributes when connected
-   */
-  getAttributes = () => {
-    this.dotSrc = this.getAttribute("dotsrc");
-    if (this.dotSrc)
-      console.debug("Received dot graph URL", this.dotSrc);
+    this.href = window.location.href.replace("?graph_only", ""); // url on open
   }
 
   connectedCallback() {
-    this.render();
+    this.dotSrc = this.getAttribute("dotsrc");
+    this.renderSource(this.dotSrc);
+
   }
 
-  render = () => {
+  renderSource = (dotSrc: string | null | undefined) => {
+    if (!dotSrc || !dotSrc.trim().length) {
+      console.error("No dot graph source url provided.");
+      return;
+    }
+    this.fetchDotString(dotSrc)
+      .then((d) => {
+        this.render(d);
+      }).catch(err => console.error(err));
+  }
+
+  render = (dotString: string) => {
     instance().then(async viz => {
-      // clear children
+      // clear component
       this.innerHTML = "";
 
-      this.getAttributes();
       const params = new URLSearchParams(window.location.search);
       this.isPopup = params.has("graph_only");
       this.canPopup = !window.location.href.includes("/cases/raw") && !window.location.href.includes("/cases/refined")
 
-
-      const dotString = import.meta.env.PROD ?
-        await this.fetchDotString() :
-        await this.loadDotStringFromFile();
-
-      if (!dotString) return; // dot string failed to load
-
-      console.debug("Received dot string");
-      console.debug(dotString);
-
       this.svg = viz.renderSVGElement(dotString);
       this.json = viz.renderJSON(dotString) as VizGraph;
+      this.graph = new DiGraph(this.json, this.svg);
+
+      // debug infos
+      console.debug("Received dot string");
+      console.debug(dotString);
       console.debug(this.svg);
       console.debug(this.json);
-
-      this.graph = new DiGraph(this.json, this.svg);
       console.debug(this.graph);
 
       // attach SVG to DOM
@@ -258,8 +251,8 @@ export class DotGraphViz extends HTMLElement {
             case "request-url":
               this.channel.postMessage({
                 type: 'current-url', payload: {
-                  path: window.location.origin + window.location.pathname,
-                  url: window.location.href
+                  href: window.location.href,
+                  src: this.dotSrc,
                 }
               });
               break;
@@ -286,9 +279,12 @@ export class DotGraphViz extends HTMLElement {
               window.close();
               break;
             case "current-url":
-              if (this.lastPath !== event.data.payload.path) {
-                this.lastPath = event.data.payload.path;
-                window.location.href = constructGraphOnlyUrl(event.data.payload.url);
+              if (this.href !== event.data.payload.href) {
+                this.href = event.data.payload.href;
+                // 
+                history.pushState({}, "", constructGraphOnlyUrl(this.href));
+                this.dotSrc = event.data.payload.src;
+                this.renderSource(this.dotSrc);
               }
               break;
 
@@ -333,31 +329,22 @@ export class DotGraphViz extends HTMLElement {
     }
   }
 
-  loadDotStringFromFile = async (): Promise<string | undefined> => {
-    const res = await fetch('/example.dot');
-    const text = await res.text();
-    return text;
-  };
+  fetchDotString = (url: string): Promise<string> => new Promise((resolve, reject) => {
+    fetch(url).then((res) => {
+      if (!res.ok) {
+        reject("Failed to fetch dot graph definition.");
+        return;
+      }
 
-  fetchDotString = async (): Promise<string | undefined> => {
-    if (!this.dotSrc) {
-      console.error("No dot graph source url provided.");
-      return;
-    }
-    const res = await fetch(this.dotSrc);
-    if (!res.ok) {
-      console.error("Failed to fetch dot graph definition.");
-      return;
-    }
-
-    const dotString = await res.text();
-    if (!dotString || !dotString.includes("digraph")) {
-      console.error("Invalid dot graph string");
-      return;
-    }
-
-    return dotString;
-  }
+      res.text().then((txt) => {
+        if (!txt.includes("digraph")) {
+          reject("Invalid dot graph string");
+          return;
+        }
+        resolve(txt);
+      }).catch(err => reject(err))
+    }).catch(err => reject(err));
+  });
 
   constructMinimizableObjects = () => {
     if (!this.graph || !this.svgg)
