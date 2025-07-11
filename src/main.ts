@@ -5,13 +5,20 @@ import { calculateCentroid, calculateEllipseRadii, cross, direction, dot, Ellips
 import { VizGraph } from "./viz";
 import { DiGraph, DiGraphConnections } from "./digraph";
 import './style.css';
+import { BroadcastMessage } from "./message";
 
 const ZOOM_LEVEL_THRESHOLD = 0.99;
 const ARROW_HEAD_WIDTH = 7;
 const ARROW_HEAD_HEIGHT = 10;
 const ARROW_HEAD_HALF_WIDTH = ARROW_HEAD_WIDTH / 2;
 
+const LS_ISPOPUPOPEN = "popup_open";
+
+const FETCH_CANCELED = "Fetch Canceled";
+
 type ZoomLevel = "ZoomIn" | "ZoomOut";
+
+
 
 export interface ActionText {
   text: string | null;
@@ -72,10 +79,21 @@ function constructGraphOnlyUrl(url: string): string {
 type MinimizableObject = { [key in ZoomLevel]: SVGGElement | null };
 
 export class DotGraphViz extends HTMLElement {
-  isPopup?: boolean;
+  static observedAttributes = ['dotsrc', 'popup'];
+
+  isPopup: boolean = false;
   canPopup?: boolean;
+
+  isPopupOpen = () => localStorage.getItem(LS_ISPOPUPOPEN) === 'true';
+
+  /** The broadcast channel which the component subscribed on  */
   channel: BroadcastChannel;
-  href: string;
+
+  /** The source URL of the dot graph definition 
+   * 
+   * Passed in as attribute `dotsrc`  which can be either:
+   * - A path to the dot file in the public folder during development
+   * - A location that serves the dot file during production */
   dotSrc?: string | null;
 
   json?: VizGraph;
@@ -102,37 +120,127 @@ export class DotGraphViz extends HTMLElement {
     edges: []
   }
 
+  /** Cancel previous fetch event
+   * 
+   * In case other fetch events are spawned by other renderSource(), 
+   * to make sure that renders are also done in the order that they are called (although they are asynchronous),
+   * we expose cancelFetch() to enable newer renderSource() to cancel the older ones before they are finished.
+   */
+  cancelFetch: () => void = () => { };
+
   constructor() {
     super();
     this.channel = new BroadcastChannel("dot-graph-viz-popup");
-    this.href = window.location.href.replace("?graph_only", ""); // url on open
+  }
+
+  postMessage = (msg: BroadcastMessage) => this.channel.postMessage(msg);
+
+  attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null) {
+    if (name === "dotsrc" && newValue !== oldValue) {
+      this.dotSrc = newValue;
+      this.renderSource();
+      // Notice the popup window that dotsrc has changed
+      this.postMessage({ type: "response-dotsrc", payload: this.dotSrc });
+    }
   }
 
   connectedCallback() {
     this.dotSrc = this.getAttribute("dotsrc");
-    this.renderSource(this.dotSrc);
+    this.isPopup = this.getAttribute("popup") === "true";
+    this.canPopup = !this.isPopup && !window.location.href.includes("/cases/raw") && !window.location.href.includes("/cases/refined")
 
+    this.setupMessageHandler();
+    this.renderSource();
   }
 
-  renderSource = (dotSrc: string | null | undefined) => {
-    if (!dotSrc || !dotSrc.trim().length) {
+  setupMessageHandler = () => {
+    // if component is used in a normal page (theory overview)
+    if (!this.isPopup) {
+      this.channel.onmessage = (event: MessageEvent<BroadcastMessage>) => {
+        switch (event.data.type) {
+          case "popup-closed":
+            // When popup is closed, refresh page.
+            window.location.reload();
+            break;
+        }
+      };
+    }
+    else {
+      // If component is a popup, add popup css class.
+      this.classList.add("popup");
+
+
+      window.addEventListener("beforeunload", () => {
+        // Notice host when a popup window is closed.
+        localStorage.setItem('popup_open', 'false');
+        this.postMessage({ type: "popup-closed" });
+      });
+
+
+      this.channel.onmessage = (event: MessageEvent<BroadcastMessage>) => {
+        switch (event.data.type) {
+          case "ping":
+            // Respond to host pings with pongs
+            this.postMessage({ type: "pong" });
+            break;
+          case "close-popup":
+            window.close();
+            break;
+          case "response-dotsrc":
+            if (this.dotSrc !== event.data.payload) {
+              this.dotSrc = event.data.payload;
+              this.renderSource();
+            }
+            break;
+        }
+      };
+
+    }
+  }
+
+  renderSource = () => {
+    if (!this.dotSrc || !this.dotSrc.trim().length) {
       console.error("No dot graph source url provided.");
       return;
     }
-    this.fetchDotString(dotSrc)
+    // Cancel previous fetch event.
+    this.cancelFetch();
+
+    this.fetchDotString(this.dotSrc)
       .then((d) => {
         this.render(d);
-      }).catch(err => console.error(err));
+      }).catch(err => {
+        if (err === FETCH_CANCELED) {
+          // Output as trace only when fetch is rejected due to canceling.
+          console.debug(FETCH_CANCELED);
+        } else {
+          // Other rejects.
+          console.error(err);
+        }
+      });
   }
 
+  /** Render the graph as SVG given dot graph definition
+   * 
+   * @param dotString The dot graph definition (usually saved as a `*.dot` file and start with "digraph" in our case)
+   */
   render = (dotString: string) => {
-    instance().then(async viz => {
-      // clear component
+    instance().then(viz => {
+      // Clear component's children.
       this.innerHTML = "";
 
-      const params = new URLSearchParams(window.location.search);
-      this.isPopup = params.has("graph_only");
-      this.canPopup = !window.location.href.includes("/cases/raw") && !window.location.href.includes("/cases/refined")
+      //
+      if (!this.isPopup && this.isPopupOpen()) {
+        const closePopupBtn = document.createElement("button");
+        closePopupBtn.textContent = "Pop-in";
+        closePopupBtn.id = "close-popup-btn";
+        closePopupBtn.addEventListener("click", () => {
+          this.channel.postMessage({ type: "close-popup" });
+        });
+        this.appendChild(closePopupBtn);
+        return;
+      }
+
 
       this.svg = viz.renderSVGElement(dotString);
       this.json = viz.renderJSON(dotString) as VizGraph;
@@ -147,6 +255,16 @@ export class DotGraphViz extends HTMLElement {
 
       // attach SVG to DOM
       this.append(this.svg);
+
+
+      if (this.canPopup) {
+        // Show pop-out (open popup) button.
+        const popupBtn = document.createElement("button");
+        popupBtn.textContent = "Pop-out";
+        popupBtn.id = "popup-btn";
+        popupBtn.addEventListener("click", this.handlePopupClick);
+        this.appendChild(popupBtn);
+      }
 
       // Allow selecting/copying text elements with the mouse 
       selectAll("text")
@@ -229,78 +347,6 @@ export class DotGraphViz extends HTMLElement {
 
       }
 
-      // if component is used in a normal page (theory overview)
-      if (!this.isPopup && this.canPopup) {
-        // popup button
-        const popupBtn = document.createElement("button");
-        popupBtn.textContent = "Pop-out";
-        popupBtn.id = "popup-btn";
-        popupBtn.addEventListener("click", this.handlePopupClick);
-        this.appendChild(popupBtn);
-
-        // when popup is closed
-        this.channel.onmessage = (event) => {
-          switch (event.data.type) {
-            case "popup-closed":
-              window.location.reload();
-              break;
-            case "pong":
-              // popup is still open 
-              this.handlePopupOpenContentChange();
-              break;
-            case "request-url":
-              this.channel.postMessage({
-                type: 'current-url', payload: {
-                  href: window.location.href,
-                  src: this.dotSrc,
-                }
-              });
-              break;
-          }
-        };
-        // initial ping
-        this.channel.postMessage({ type: 'ping' });
-      }
-      else // if component is a popup
-      {
-        this.classList.add("popup");
-        window.addEventListener("beforeunload", () => {
-          // notice that popup is closed
-          this.channel.postMessage({ type: 'popup-closed' });
-        });
-
-        // respond to host pings
-        this.channel.onmessage = (event) => {
-          switch (event.data.type) {
-            case "ping":
-              this.channel.postMessage({ type: "pong" });
-              break;
-            case "close-popup":
-              window.close();
-              break;
-            case "current-url":
-              if (this.href !== event.data.payload.href) {
-                this.href = event.data.payload.href;
-                // 
-                history.pushState({}, "", constructGraphOnlyUrl(this.href));
-                this.dotSrc = event.data.payload.src;
-                this.renderSource(this.dotSrc);
-              }
-              break;
-
-          }
-        };
-
-        // a hacky way of syncing url changes
-        // by asking host to give its url
-        setInterval(() => {
-          this.channel.postMessage({
-            type: 'request-url'
-          });
-        }, 200); // check every 200ms
-
-      }
-
     });
   }
 
@@ -322,14 +368,22 @@ export class DotGraphViz extends HTMLElement {
     if (popup) {
       // after popup open successfully,
       // remove all children (the whole graph)
-      this.handlePopupOpenContentChange();
+
+      localStorage.setItem(LS_ISPOPUPOPEN, "true");
+      this.renderSource();
 
     } else {
       console.error("Failed to open popup!");
     }
   }
 
-  fetchDotString = (url: string): Promise<string> => new Promise((resolve, reject) => {
+  fetchDotString = (url: string): Promise<string> => {
+    const { promise, resolve, reject } = Promise.withResolvers<string>();
+
+    this.cancelFetch = () => {
+      reject(FETCH_CANCELED);
+    }
+
     fetch(url).then((res) => {
       if (!res.ok) {
         reject("Failed to fetch dot graph definition.");
@@ -344,7 +398,9 @@ export class DotGraphViz extends HTMLElement {
         resolve(txt);
       }).catch(err => reject(err))
     }).catch(err => reject(err));
-  });
+
+    return promise;
+  };
 
   constructMinimizableObjects = () => {
     if (!this.graph || !this.svgg)
