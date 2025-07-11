@@ -422,26 +422,6 @@ export class DotGraphViz extends HTMLElement {
     }
 
     // minimizable edges
-    for (const [edgeId, edge] of Object.entries(this.graph.edges)) {
-      if (edge.minimizable) {
-        const edgeEl = select(this.svgg).selectChild<SVGGElement>("#" + edge.elementId).node();
-        if (edgeEl) {
-          this.minimizableObjects.edges[edgeId] = {
-            "ZoomIn": null,
-            "ZoomOut": null
-          }
-          this.minimizableObjects.edges[edgeId]["ZoomIn"] = edgeEl;
-          // minimize edges requires information about the from- and to- node
-          const minimizedFromNode = this.minimizableObjects.nodes[edge.from] ? this.minimizableObjects.nodes[edge.from]["ZoomOut"] : null;
-          const minimizedToNode = this.minimizableObjects.nodes[edge.to] ? this.minimizableObjects.nodes[edge.to]["ZoomOut"] : null;
-          this.minimizableObjects.edges[edgeId]["ZoomOut"] = this.minimizeEdge(
-            edgeEl,
-            minimizedFromNode,
-            minimizedToNode,
-          );
-        }
-      }
-    }
 
   };
 
@@ -457,13 +437,15 @@ export class DotGraphViz extends HTMLElement {
     minimized.append("title")
       .text(getTitleText(g));
 
-    minimized.append("ellipse")
-      .attr("cx", center.x)
-      .attr("cy", center.y)
-      .attr("rx", calculateEllipseRadii(actionText.bb?.width ?? 50, 30)) // 30 = margin x
-      .attr("ry", calculateEllipseRadii(actionText.bb?.height ?? 50, 10)) // 10 = margin y
-      .attr("stroke", "black")
-      .attr("fill", getPolygonFillColor(g));
+    const polygon = select(g).selectChild<SVGPolygonElement>("polygon");
+    const polygonBBox = polygon.node()!.getBBox();
+
+    minimized.append("polygon")
+      .attr("points", polygon.attr("points"))
+      .attr("fill", polygon.attr("fill"))
+      .attr("stroke", polygon.attr("stroke"));
+
+    const actualText = actionText.text ? actionText.text.slice(0, actionText.text.indexOf("[")) + "[...]" : "default";
 
     minimized.append("text")
       .attr("x", center.x)
@@ -471,8 +453,8 @@ export class DotGraphViz extends HTMLElement {
       .attr("text-anchor", "middle")
       .attr("alignment-baseline", "middle")
       .attr("font-family", "Helvetica,sans-Serif") // *WARNING, hard-coded, pls adapt it to record font family
-      .attr("font-size", actionText.fontSize ? Number(actionText.fontSize) + 2 : 8) // *WARNING, hard-coded, pls adapt it to record font size
-      .text(actionText.text ?? "default");
+      .attr("font-size", `${Math.min(polygonBBox.width / actualText.length / 0.5, polygonBBox.height * 0.8).toFixed(0)}px`)
+      .text(actualText);
 
     return minimized.node()!; // I just created it so its node() must be non-null
   };
