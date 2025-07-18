@@ -451,7 +451,7 @@ export class DotGraphViz extends HTMLElement {
 
     // Shorten action text
     const actualText = actionText.text ?
-      actionText.text.indexOf("[") ?
+      actionText.text.indexOf("[") >= 0 ?
         actionText.text.slice(0, actionText.text.indexOf("[")) + "[...]"
         : actionText.text
       : "default";
