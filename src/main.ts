@@ -1,7 +1,7 @@
 import { instance } from "@viz-js/viz";
 import { select, selectAll, zoom, create, D3ZoomEvent } from "d3";
 import { extendCurvePath, getCubicBezierCurve, getCubicBezierCurveGradients } from "./path";
-import { calculateCentroid, calculateEllipseRadii, cross, direction, dot, Ellipse, intersect, inv, print2f, project, Ray, sub, traverse, Vec2 } from "./math";
+import { calculateCentroid, cross, direction, dot, Ellipse, intersect, inv, print2f, project, Ray, sub, traverse, Vec2 } from "./math";
 import { VizGraph } from "./viz";
 import { DiGraph, DiGraphConnections } from "./digraph";
 import './style.css';
@@ -11,6 +11,8 @@ const ZOOM_LEVEL_THRESHOLD = 0.99;
 const ARROW_HEAD_WIDTH = 7;
 const ARROW_HEAD_HEIGHT = 10;
 const ARROW_HEAD_HALF_WIDTH = ARROW_HEAD_WIDTH / 2;
+const ABBREVIATION_TABLE_SCALE = 1.5;
+const MAX_FONT = 30;
 
 const LS_ISPOPUPOPEN = "popup_open";
 
@@ -24,6 +26,7 @@ export interface ActionText {
   text: string | null;
   bb: DOMRect | null;
   fontSize: string | null;
+  fontFamily: string | null;
 }
 
 function asEllipse(ellipse: SVGEllipseElement): Ellipse {
@@ -38,11 +41,6 @@ function asEllipse(ellipse: SVGEllipseElement): Ellipse {
   }
 }
 
-
-function getPolygonFillColor(g: SVGGElement): string {
-  return select(g).selectChild("polygon").attr("fill");
-}
-
 function getActionText(g: SVGGElement): ActionText {
   const actionTextSelection = select<SVGGElement, unknown>(g)
     .selectChildren<SVGTextElement, unknown>("text")
@@ -54,13 +52,15 @@ function getActionText(g: SVGGElement): ActionText {
     return {
       text: null,
       bb: null,
-      fontSize: null
+      fontSize: null,
+      fontFamily: null
     };
 
   return {
     text: actionTextSelection.nodes()[0].textContent,
     bb: actionTextSelection.nodes()[0].getBBox(),
-    fontSize: actionTextSelection.nodes()[0].getAttribute("font-size")
+    fontSize: actionTextSelection.nodes()[0].getAttribute("font-size"),
+    fontFamily: actionTextSelection.nodes()[0].getAttribute("font-family"),
   }
 }
 
@@ -330,6 +330,11 @@ export class DotGraphViz extends HTMLElement {
         const dx = graphBBox.x + graphBBox.width - abbrevTblElBBox.width - abbrevTblElBBox.x - marginX;
         const dy = graphBBox.y + graphBBox.height - abbrevTblElBBox.height - abbrevTblElBBox.y - marginY;
 
+        const abbrevTblBottomRightPoint: Vec2 = {
+          x: abbrevTblElBBox.width + abbrevTblElBBox.x,
+          y: abbrevTblElBBox.height + abbrevTblElBBox.y
+        }
+
         // inserting a rect box before the text 
         // reference: https://d3js.org/d3-selection/modifying#selection_insert
         abbrevTbl.insert("rect", "text")
@@ -338,9 +343,8 @@ export class DotGraphViz extends HTMLElement {
           .attr("x", abbrevTblElBBox.x)
           .attr("y", abbrevTblElBBox.y)
           .attr("fill", "white");
-
         abbrevTbl
-          .attr("transform", this.initTransform + ` translate(${dx} ${dy})`)
+          .attr("transform", `${this.initTransform} translate(${dx} ${dy}) translate(${abbrevTblBottomRightPoint.x} ${abbrevTblBottomRightPoint.y}) scale(${ABBREVIATION_TABLE_SCALE}) translate(${-abbrevTblBottomRightPoint.x} ${-abbrevTblBottomRightPoint.y})`);
 
         abbrevTbl.remove();
         this.svg.appendChild(abbrevTblEl);
@@ -445,15 +449,20 @@ export class DotGraphViz extends HTMLElement {
       .attr("fill", polygon.attr("fill"))
       .attr("stroke", polygon.attr("stroke"));
 
-    const actualText = actionText.text ? actionText.text.slice(0, actionText.text.indexOf("[")) + "[...]" : "default";
+    // Shorten action text
+    const actualText = actionText.text ?
+      actionText.text.indexOf("[") ?
+        actionText.text.slice(0, actionText.text.indexOf("[")) + "[...]"
+        : actionText.text
+      : "default";
 
     minimized.append("text")
       .attr("x", center.x)
       .attr("y", center.y)
       .attr("text-anchor", "middle")
       .attr("alignment-baseline", "middle")
-      .attr("font-family", "Helvetica,sans-Serif") // *WARNING, hard-coded, pls adapt it to record font family
-      .attr("font-size", `${Math.min(polygonBBox.width / actualText.length / 0.5, polygonBBox.height * 0.8).toFixed(0)}px`)
+      .attr("font-family", actionText.fontFamily) // *WARNING, hard-coded, pls adapt it to record font family
+      .attr("font-size", `${Math.min(MAX_FONT, Math.min(polygonBBox.width / actualText.length / 0.54, polygonBBox.height * 0.8)).toFixed(0)}px`)
       .text(actualText);
 
     return minimized.node()!; // I just created it so its node() must be non-null
