@@ -555,10 +555,22 @@ getOverviewR idx path = withTheory idx ( \ti -> do
 getOverviewDiffR :: TheoryIdx -> DiffTheoryPath -> Handler Html
 getOverviewDiffR idx path = withDiffTheory idx ( \ti -> do
   renderF <- getUrlRender
-  defaultLayout $ do
-    overview <- liftIO $ overviewDiffTpl renderF ti path
-    setTitle (toHtml $ "DiffTheory: " ++ get diffThyName (dtiTheory ti))
-    overview )
+  renderParamsF <- getUrlRenderParams
+  getParams <- reqGetParams <$> getRequest
+  let graphOnlyMaybe = lookup "graph_only" getParams :: Maybe Text
+  case graphOnlyMaybe of 
+    Just graphOnly -> defaultLayout $ do 
+      setTitle (toHtml $ "DiffTheory: " ++ get diffThyName (dtiTheory ti))
+      toWidget
+        [hamlet|
+            <dot-graph-viz dotsrc="#{imgPath}" popup="true">
+        |]
+      where
+      imgPath = T.unpack $ renderF (TheoryGraphDiffR idx path)
+    Nothing -> defaultLayout $ do
+      overview <- liftIO $ overviewDiffTpl renderF ti path
+      setTitle (toHtml $ "DiffTheory: " ++ get diffThyName (dtiTheory ti))
+      overview )
 
 -- | Show source (pretty-printed open theory).
 getTheorySourceR :: TheoryIdx -> Handler RepPlain
@@ -945,39 +957,30 @@ getTheoryGraphR idx path = withTheory idx ( \ti -> do
         Just dotStr -> return (T.pack dotStr)
         Nothing     -> notFound
       )
-      -- dot' <- dotGraphString
-      --     (dotSystemCompact graphOptions dotOptions)
-      --     (tiTheory ti) 
-      --     path
-      -- case dot' of
-      --   Nothing -> notFound
-      --   Just dot -> return dot)
-          -- sendFile (fromString . imageFormatMIME $ imageFormat yesod) img)
 
 -- | Get rendered graph for theory and given path.
-getTheoryGraphDiffR :: TheoryIdx -> DiffTheoryPath -> Handler ()
+getTheoryGraphDiffR :: TheoryIdx -> DiffTheoryPath -> Handler Text
 getTheoryGraphDiffR idx path = getTheoryGraphDiffR' idx path False
 
 -- | Get rendered graph for theory and given path.
-getTheoryGraphDiffR' :: TheoryIdx -> DiffTheoryPath -> Bool -> Handler ()
+getTheoryGraphDiffR' :: TheoryIdx -> DiffTheoryPath -> Bool -> Handler Text
 getTheoryGraphDiffR' idx path mirror = withDiffTheory idx ( \ti -> do
       yesod <- getYesod
       (graphOptions, dotOptions) <- getOptions
-      img' <- liftIO $ traceExceptions "getTheoryGraphDiffR" $
-        imgDiffThyPath
+      case imgDiffThyPath
           (imageFormat yesod)
           -- a.d. TODO should diff theories support JSON output?
           (ocGraphCommand $ outputCmd yesod)
           (cacheDir yesod)
           (dotSystemCompact graphOptions dotOptions)
           (dtiTheory ti) path
-          (mirror)
-      case img' of
+          (mirror) of
         Nothing -> notFound
-        Just img -> sendFile (fromString . imageFormatMIME $ imageFormat yesod) img)
+        Just dotStr -> return (T.pack dotStr)
+        )
 
 -- | Get rendered mirror graph for theory and given path.
-getTheoryMirrorDiffR :: TheoryIdx -> DiffTheoryPath -> Handler ()
+getTheoryMirrorDiffR :: TheoryIdx -> DiffTheoryPath -> Handler Text
 getTheoryMirrorDiffR idx path =  getTheoryGraphDiffR' idx path True
 
 -- | Kill a thread (aka 'cancel request').

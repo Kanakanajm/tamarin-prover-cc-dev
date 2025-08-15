@@ -182,7 +182,7 @@ refDotPath renderUrl tidx path = withTag "dot-graph-viz" [("dotsrc", imgPath)] (
 
 -- | Reference a dot graph for the given diff path.
 refDotDiffPath :: HtmlDocument d => RenderUrl -> TheoryIdx -> DiffTheoryPath -> Bool -> d
-refDotDiffPath renderUrl tidx path mirror = withTag "a" [("href", imgPath), ("target", "_blank")] $ closedTag "img" [("class", "graph"), ("src", imgPath)]
+refDotDiffPath renderUrl tidx path mirror = withTag "dot-graph-viz" [("dotsrc", imgPath)] (text "")
   where
     imgPath = if mirror
               then T.unpack $ renderUrl (TheoryMirrorDiffR tidx path)
@@ -1430,14 +1430,14 @@ imgDiffThyPath :: ImageFormat
            -> (System -> D.Dot ())
            -> ClosedDiffTheory
            -> DiffTheoryPath
-           -> Bool
-           -> IO (Maybe FilePath)            -- ^ True if we want the mirror graph
+           -> Bool                   -- ^ True if we want the mirror graph
+           -> Maybe String        
 imgDiffThyPath imgFormat dotCommand cacheDir_ compact thy path mirror = go path
   where
-    go (DiffTheorySource s k d i j) = renderDotCode (casesDotCode s k i j d)
-    go (DiffTheoryProof s l p)      = renderDotCode (proofPathDotCode s l p)
-    go (DiffTheoryDiffProof l p)    = renderDotCode (proofPathDotCodeDiff l p mirror)
-    go _                            = error "Unhandled theory path. This is a bug."
+    go (DiffTheorySource s k d i j) = Just $ casesDotCode s k i j d
+    go (DiffTheoryProof s l p)      = Just $ proofPathDotCode s l p
+    go (DiffTheoryDiffProof l p)    = Just $ proofPathDotCodeDiff l p mirror
+    go _                            = Nothing
 
     -- Prefix dot code with comment mentioning all protocol rule names
     prefixedShowDot dot = unlines
@@ -1482,57 +1482,7 @@ imgDiffThyPath imgFormat dotCommand cacheDir_ compact thy path mirror = go path
           else do
             sequent <- get dsSystem diffSequent
             return $ compact sequent
-
-    -- Render a piece of dot code
-    renderDotCode code = do
-      let dotPath = cacheDir_ </> getDotPath code
-          imgPath = addExtension dotPath (show imgFormat)
-
-          -- A busy wait loop with a maximal number of iterations
-          renderedOrRendering :: Int -> IO Bool
-          renderedOrRendering n = do
-              dotExists <- doesFileExist dotPath
-              imgExists <- doesFileExist imgPath
-              if (n > 0 && dotExists && not imgExists)
-                  then do threadDelay (10 * 1000) -- wait 10 ms
-                          renderedOrRendering (n - 1)
-                  else return imgExists
-
-      -- Ensure that the output directory exists.
-      createDirectoryIfMissing True (takeDirectory dotPath)
-
-      imgGenerated <- firstSuccess
-          [ -- There might be some other thread that rendered or is rendering
-            -- this dot file. We wait at most 50 iterations (0.5 sec timout)
-            -- for this other thread to render the image. Afterwards, we give
-            -- it a try by ourselves.
-            renderedOrRendering 50
-            -- create dot-file and render to image
-          , do writeFile dotPath code
-               dotToImg "dot" dotPath imgPath
-            -- sometimes 'dot' fails => use 'fdp' as a backup tool
-          , dotToImg "fdp" dotPath imgPath
-          ]
-      if imgGenerated
-        then return $ Just imgPath
-        else trace ("WARNING: failed to convert:\n  '" ++ dotPath ++ "'")
-                   (return Nothing)
-
-    dotToImg dotMode dotFile imgFile = do
-      (ecode,_out,err) <- readProcessWithExitCode dotCommand
-                              [ "-T"++show imgFormat, "-K"++dotMode, "-o",imgFile, dotFile]
-                              ""
-      case ecode of
-        ExitSuccess   -> return True
-        ExitFailure i -> do
-          putStrLn $ "dotToImg: "++dotCommand++" failed with code "
-                      ++show i++" for file "++dotFile++":\n"++err
-          return False
-
-    firstSuccess []     = return False
-    firstSuccess (m:ms) = do
-      s <- m
-      if s then return True else firstSuccess ms
+      
 
 
 -- | Get title to display for a given proof path.
