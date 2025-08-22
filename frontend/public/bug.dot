@@ -1,0 +1,24 @@
+digraph "G" {
+nodesep="0.3";
+ranksep="0.3";
+node[fontsize="8",fontname="Helvetica",width="0.3",height="0.2"];
+edge[fontsize="8",fontname="Helvetica"];
+n0[label="#i : coerce[!KU( h(t.1) )]",shape="ellipse"];
+n5[shape="record",label="{{<n1> !Ltk( $S.7, ~ltkS.11 )|<n2> In( AE1 )}|{<n3> #vr.6 : Serv_1[Eq( '1', '1' ),\l&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AnswerRequest( $S.7, t.1 )]\l}|{<n4> Out( h(t.1) )}}",fillcolor="#c3da98",style="filled",fontcolor="black",role="Undefined"];
+n6[label="#vf.9 : isend",shape="ellipse"];
+n11[shape="record",label="{{<n7> Fr( ~ltkS.11 )}|{<n8> #vr.13 : Register_pk}|{<n9> !Ltk( $S.7, ~ltkS.11 )|<n10> !Pk( $S.7, PK1 )}}",fillcolor="#b1dc9a",style="filled",fontcolor="black",role="Undefined"];
+n12[label="!KU( AE1 ) @ #vk.10",shape="ellipse",color="gray"];
+n5:n4 -> n0[color="orangered2"];
+n6 -> n5:n2[color="gray30"];
+n11:n9 -> n5:n1[style="bold",weight="10.0",color="gray50"];
+n12 -> n6[color="red",style="dashed"];
+n11:n8 -> n6[color="blue3",style="dashed"];
+{
+rank="sink";
+n13[shape="plain",label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="3" CELLPADDING="1"><TR><TD ALIGN="LEFT" VALIGN="TOP"><FONT COLOR="#000000">PK1</FONT></TD> <TD ALIGN="LEFT" VALIGN="TOP">=</TD> <TD ALIGN="LEFT" VALIGN="TOP">pk(~ltkS.11)</TD></TR>
+                                                                 <TR><TD ALIGN="LEFT" VALIGN="TOP"><FONT COLOR="#000000">AE1</FONT></TD> <TD ALIGN="LEFT" VALIGN="TOP">=</TD> <TD ALIGN="LEFT" VALIGN="TOP">aenc(&lt;'1', t.1&gt;, PK1)</TD></TR></TABLE>>];
+
+}
+n0 -> n13[style="invis"];
+
+}

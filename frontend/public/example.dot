@@ -1,0 +1,99 @@
+digraph "exporting graph" {
+	graph [nodesep=0.3,
+		ranksep=0.3
+	];
+	node [fontname=Helvetica,
+		fontsize=8,
+		height=0.2,
+		width=0.3
+	];
+	edge [fontname=Helvetica,
+		fontsize=8
+	];
+	{
+		graph [rank=sink];
+		n28	[label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="3" CELLPADDING="1"><TR><TD ALIGN="LEFT" VALIGN="TOP"><FONT COLOR="#000000">KE1</FONT></TD> <TD ALIGN="LEFT" VALIGN="TOP">=</TD> <TD ALIGN="LEFT" VALIGN="TOP">keycomplicated.1</TD></TR> <TR><TD ALIGN="LEFT" VALIGN="TOP"><FONT COLOR="#000000">KE2</FONT></TD> <TD ALIGN="LEFT" VALIGN="TOP">=</TD> <TD ALIGN="LEFT" VALIGN="TOP">keycomplicated</TD></TR> <TR><TD ALIGN="LEFT" VALIGN="TOP"><FONT COLOR="#000000">SE3</FONT></TD> <TD ALIGN="LEFT" VALIGN="TOP">=</TD> <TD ALIGN="LEFT" VALIGN="TOP">senc(xsimple, keysimple)</TD></TR> <TR><TD ALIGN="LEFT" VALIGN="TOP"><FONT COLOR="#000000">SE4</FONT></TD> <TD ALIGN="LEFT" VALIGN="TOP">=</TD> <TD ALIGN="LEFT" VALIGN="TOP">senc(xsimple, ~key)</TD></TR> <TR><TD ALIGN="LEFT" VALIGN="TOP"><FONT COLOR="#000000">XC1</FONT></TD> <TD ALIGN="LEFT" VALIGN="TOP">=</TD> <TD ALIGN="LEFT" VALIGN="TOP">xcomplicated</TD></TR> <TR><TD ALIGN="LEFT" VALIGN="TOP"><FONT COLOR="#000000">SE1</FONT></TD> <TD ALIGN="LEFT" VALIGN="TOP">=</TD> <TD ALIGN="LEFT" VALIGN="TOP">senc(XC1, KE1)</TD></TR> <TR><TD ALIGN="LEFT" VALIGN="TOP"><FONT COLOR="#000000">SE2</FONT></TD> <TD ALIGN="LEFT" VALIGN="TOP">=</TD> <TD ALIGN="LEFT" VALIGN="TOP">senc(XC1, KE2)</TD></TR> <TR><TD ALIGN="LEFT" VALIGN="TOP"><FONT COLOR="#000000">XS1</FONT></TD> <TD ALIGN="LEFT" VALIGN="TOP">=</TD> <TD ALIGN="LEFT" VALIGN="TOP">~xsimple.1</TD></TR></TABLE>>,
+			shape=plain];
+	}
+	n5	[fillcolor="#c3da98",
+		fontcolor=black,
+		label="{{<n0> ReceiverKeyComplicated( KE2 )|<n1> In( SE2 )|<n2> ReceiverKeySimple( ~key )|<n3> In( SE4 )}|{<n4> #i : receive[Unique( &lt;XC1, \
+xsimple&gt; )]}}",
+		role=Undefined,
+		shape=record,
+		class=record,
+		style=filled];
+	n5:n4 -> n28	[style=invis];
+	n11	[fillcolor="#c3da98",
+		fontcolor=black,
+		label="{{<n6> ReceiverKeyComplicated( KE1 )|<n7> In( SE1 )|<n8> ReceiverKeySimple( keysimple )|<n9> In( SE3 )}|{<n10> #j : receive[Unique( &lt;\
+XC1, xsimple&gt; )]}}",
+		role=Undefined,
+		shape=record,
+		class=record,
+		style=filled];
+	n11:n10 -> n28	[style=invis];
+	n12	[label="#vf : isend",
+		class=ellipse,
+		shape=ellipse];
+	n12 -> n5:n1	[color=gray30];
+	n13	[label="#vk : c_senc[!KU( SE3 )]",
+		class=ellipse,
+		shape=ellipse];
+	n22	[label="#vf.3 : isend",
+		class=ellipse,
+		shape=ellipse];
+	n13 -> n22	[color=red,
+		style=dashed];
+	n19	[fillcolor="#b1dc9a",
+		fontcolor=black,
+		label="{{<n14> Fr( XS1 )|<n15> Fr( ~key )}|{<n16> #vr : generatesimple[Simpleunique( XS1 )]}|{<n17> Out( senc(XS1, ~key) )|<n18> ReceiverKeySimple( ~\
+key )}}",
+		role=Undefined,
+		shape=record,
+		class=record,
+		style=filled];
+	n19:n18 -> n5:n2	[style=bold,
+		weight=10.0];
+	n20	[label="#vf.1 : isend",
+		class=ellipse,
+		shape=ellipse];
+	n19:n16 -> n20	[color=blue3,
+		style=dashed];
+	n20 -> n5:n3	[color=gray30];
+	n21	[label="#vf.2 : isend",
+		class=ellipse,
+		shape=ellipse];
+	n21 -> n11:n7	[color=gray30];
+	n22 -> n11:n9	[color=gray30];
+	n23	[color=gray,
+		label="!KU( SE2 ) @ #vk.1",
+		class=ellipse,
+		shape=ellipse];
+	n23 -> n12	[color=red,
+		style=dashed];
+	n24	[color=gray,
+		label="!KU( SE4 ) @ #vk.2",
+		class=ellipse,
+		shape=ellipse];
+	n24 -> n20	[color=red,
+		style=dashed];
+	n25	[color=gray,
+		label="!KU( SE1 ) @ #vk.3",
+		class=ellipse,
+		shape=ellipse];
+	n25 -> n21	[color=red,
+		style=dashed];
+	n26	[color=gray,
+		label="!KU( xsimple ) @ #vk.4",
+		class=ellipse,
+		shape=ellipse];
+	n26 -> n13	[color=red,
+		style=dashed];
+	n27	[color=gray,
+		label="!KU( keysimple ) @ #vk.5",
+		class=ellipse,
+		shape=ellipse];
+	n27 -> n13	[color=red,
+		style=dashed];
+}
