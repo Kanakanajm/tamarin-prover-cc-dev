@@ -43,9 +43,9 @@ clean:	tamarin-clean
 # Build Frontend
 .PHONY: frontend
 frontend:
-	cd tgui-new-concept && npm install && npm run build
-	cp tgui-new-concept/dist/assets/index.js data/js/interactive-dot.js
-	cp tgui-new-concept/dist/assets/index.css data/css/interactive-dot.css
+	cd frontend && npm install && npm run build
+	cp frontend/dist/assets/index.js data/js/interactive-dot.js
+	cp frontend/dist/assets/index.css data/css/interactive-dot.css
 
 # ###########################################################################
 # NOTE the remainder makefile is FOR DEVELOPERS ONLY.
