@@ -79,10 +79,10 @@ function constructGraphOnlyUrl(url: string): string {
 type MinimizableObject = { [key in ZoomLevel]: SVGGElement | null };
 
 export class DotGraphViz extends HTMLElement {
-  static observedAttributes = ['dotsrc', 'popup'];
+  static observedAttributes = ['dotsrc', 'popup', 'canpop'];
 
   isPopup: boolean = false;
-  canPopup?: boolean;
+  canPopup: boolean = false;
 
   isPopupOpen = () => localStorage.getItem(LS_ISPOPUPOPEN) === 'true';
 
@@ -147,7 +147,7 @@ export class DotGraphViz extends HTMLElement {
   connectedCallback() {
     this.dotSrc = this.getAttribute("dotsrc");
     this.isPopup = this.getAttribute("popup") === "true";
-    this.canPopup = !this.isPopup && !window.location.href.includes("/cases/raw") && !window.location.href.includes("/cases/refined")
+    this.canPopup = !this.isPopup && this.getAttribute("canpop") === "true";
 
     this.setupMessageHandler();
     this.renderSource();
@@ -256,6 +256,7 @@ export class DotGraphViz extends HTMLElement {
       // attach SVG to DOM
       this.append(this.svg);
 
+      console.log(this.canPopup);
 
       if (this.canPopup) {
         // Show pop-out (open popup) button.

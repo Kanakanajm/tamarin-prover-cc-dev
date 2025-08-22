@@ -14,7 +14,9 @@ Portability :  non-portable
 
 module Web.Handler
   ( getOverviewR
+  , getInteractiveOverviewR
   , getOverviewDiffR
+  , getInteractiveOverviewDiffR
   , getRootR
   , postRootR
   , getTheorySourceR
@@ -27,8 +29,11 @@ module Web.Handler
   , getTheoryPathDiffMR
   -- , getTheoryPathDR
   , getTheoryGraphR
+  , getTheoryInteractiveGraphR
   , getTheoryGraphDiffR
   , getTheoryMirrorDiffR
+  , getTheoryInteractiveGraphDiffR
+  , getTheoryInteractiveMirrorDiffR
   , getAutoProverR
   , getAutoDiffProverR
   , getAutoProverDiffR
@@ -120,7 +125,6 @@ import           Text.Read                    (readMaybe)
 import           Theory.Constraint.System.Graph.Graph
 import           Theory.Constraint.System.Dot (BoringNodeStyle, dotSystemCompact, doNodeStyle)
 
-import           Data.Text (Text)
 -- Quasi-quotation syntax changed from GHC 6 to 7,
 -- so we need this switch in order to support both
 #if __GLASGOW_HASKELL__ >= 700
@@ -444,7 +448,7 @@ modifyTheory ti f fpath errResponse = do
       Right Nothing    -> return (responseToJson errResponse)
       Right (Just thy) -> do
         newThyIdx <- putTheory (Just ti) Nothing thy rep
-        newUrl <- getUrlRender <*> pure (OverviewR newThyIdx (fpath thy))
+        newUrl <- getUrlRender <*> pure (InteractiveOverviewR newThyIdx (fpath thy))
         return . responseToJson $ JsonRedirect newUrl
   where
    excResponse e = responseToJson
@@ -464,7 +468,7 @@ modifyDiffTheory ti f fpath errResponse = do
       Right Nothing    -> return (responseToJson errResponse)
       Right (Just thy) -> do
         newThyIdx <- putDiffTheory (Just ti) Nothing thy rep
-        newUrl <- getUrlRender <*> pure (OverviewDiffR newThyIdx (fpath thy))
+        newUrl <- getUrlRender <*> pure (InteractiveOverviewDiffR newThyIdx (fpath thy))
         return . responseToJson $ JsonRedirect newUrl
   where
    excResponse e = responseToJson
@@ -534,39 +538,63 @@ getOverviewR :: TheoryIdx -> TheoryPath -> Handler Html
 getOverviewR idx path = withTheory idx ( \ti -> do
   renderF <- getUrlRender
   renderParamsF <- getUrlRenderParams
+  defaultLayout $ do
+    getParams <- reqGetParams <$> getRequest
+    let renderParamsF' route = renderParamsF route getParams
+    overview <- liftIO $ overviewTpl renderF renderParamsF' ti path
+    setTitle (toHtml $ "Theory: " ++ get thyName (tiTheory ti))
+    overview )
+
+-- | Show overview over theory (framed layout) with interactive dot graph
+-- or only the interactive dot graph if opened/requested as a pop up (with graph_only in the url param)
+getInteractiveOverviewR  :: TheoryIdx -> TheoryPath -> Handler Html
+getInteractiveOverviewR idx path = withTheory idx ( \ti -> do
+  renderF <- getUrlRender
+  renderParamsF <- getUrlRenderParams
   getParams <- reqGetParams <$> getRequest
-  let graphOnlyMaybe = lookup "graph_only" getParams :: Maybe Text
+  let graphOnlyMaybe = lookup "graph_only" getParams :: Maybe T.Text
   case graphOnlyMaybe of 
     Just graphOnly -> defaultLayout $ do 
       setTitle (toHtml $ "Theory: " ++ get thyName (tiTheory ti))
       toWidget
         [hamlet|
-            <dot-graph-viz dotsrc="#{imgPath}" popup="true">
+            <dot-graph-viz dotsrc="#{dotPath}" popup="true">
         |]
       where
-      imgPath = T.unpack $ renderF (TheoryGraphR idx path)
+      dotPath = T.unpack $ renderF (TheoryInteractiveGraphR idx path)
     Nothing -> defaultLayout $ do
       let renderParamsF' route = renderParamsF route getParams
       overview <- liftIO $ overviewTpl renderF renderParamsF' ti path
       setTitle (toHtml $ "Theory: " ++ get thyName (tiTheory ti))
       overview )
 
+
 -- | Show overview over diff theory (framed layout).
 getOverviewDiffR :: TheoryIdx -> DiffTheoryPath -> Handler Html
 getOverviewDiffR idx path = withDiffTheory idx ( \ti -> do
   renderF <- getUrlRender
+  defaultLayout $ do
+    overview <- liftIO $ overviewDiffTpl renderF ti path
+    setTitle (toHtml $ "DiffTheory: " ++ get diffThyName (dtiTheory ti))
+    overview )
+
+-- | Show overview over diff theory (framed layout) with interactive dot graph
+-- or only the interactive dot graph if opened/requested as a pop up (with graph_only in the url param)
+getInteractiveOverviewDiffR :: TheoryIdx -> DiffTheoryPath -> Handler Html
+getInteractiveOverviewDiffR idx path = withDiffTheory idx ( \ti -> do
+  renderF <- getUrlRender
   renderParamsF <- getUrlRenderParams
   getParams <- reqGetParams <$> getRequest
-  let graphOnlyMaybe = lookup "graph_only" getParams :: Maybe Text
+  let graphOnlyMaybe = lookup "graph_only" getParams :: Maybe T.Text
   case graphOnlyMaybe of 
     Just graphOnly -> defaultLayout $ do 
       setTitle (toHtml $ "DiffTheory: " ++ get diffThyName (dtiTheory ti))
       toWidget
         [hamlet|
-            <dot-graph-viz dotsrc="#{imgPath}" popup="true">
+            <dot-graph-viz dotsrc="#{dotPath}" popup="true">
         |]
       where
-      imgPath = T.unpack $ renderF (TheoryGraphDiffR idx path)
+      dotPath = T.unpack $ renderF (TheoryInteractiveGraphDiffR idx path)
     Nothing -> defaultLayout $ do
       overview <- liftIO $ overviewDiffTpl renderF ti path
       setTitle (toHtml $ "DiffTheory: " ++ get diffThyName (dtiTheory ti))
@@ -950,38 +978,74 @@ getOptions = do
 
 
 -- | Get rendered graph for theory and given path.
-getTheoryGraphR :: TheoryIdx -> TheoryPath -> Handler Text
+getTheoryGraphR :: TheoryIdx -> TheoryPath -> Handler ()
 getTheoryGraphR idx path = withTheory idx ( \ti -> do
+      yesod <- getYesod
       (graphOptions, dotOptions) <- getOptions
-      case (dotGraphString (dotSystemCompact graphOptions dotOptions) (tiTheory ti) path) of 
-        Just dotStr -> return (T.pack dotStr)
-        Nothing     -> notFound
+      img' <- liftIO $ traceExceptions "getTheoryGraphR" $
+        imgThyPath
+          (imageFormat yesod)
+          (outputCmd yesod)
+          (cacheDir yesod)
+          (dotSystemCompact graphOptions dotOptions)
+          (\label system -> sequentsToJSONPretty graphOptions [(label, system)])
+          (tiTheory ti) path
+      case img' of
+        Nothing -> notFound
+        Just img -> sendFile (fromString . imageFormatMIME $ imageFormat yesod) img)
+
+-- | Get rendered interactive dot graph for theory and given path.
+getTheoryInteractiveGraphR:: TheoryIdx -> TheoryPath -> Handler T.Text
+getTheoryInteractiveGraphR idx path = withTheory idx ( \ti -> do
+        (graphOptions, dotOptions) <- getOptions
+        case (dotGraphString (dotSystemCompact graphOptions dotOptions) (tiTheory ti) path) of 
+          Just dotStr -> return (T.pack dotStr)
+          Nothing     -> notFound
       )
 
 -- | Get rendered graph for theory and given path.
-getTheoryGraphDiffR :: TheoryIdx -> DiffTheoryPath -> Handler Text
+getTheoryGraphDiffR :: TheoryIdx -> DiffTheoryPath -> Handler ()
 getTheoryGraphDiffR idx path = getTheoryGraphDiffR' idx path False
 
+-- | Get rendered interactive dot graph for theory and given path.
+getTheoryInteractiveGraphDiffR :: TheoryIdx -> DiffTheoryPath -> Handler T.Text
+getTheoryInteractiveGraphDiffR idx path = getTheoryInteractiveGraphDiffR' idx path False
+
 -- | Get rendered graph for theory and given path.
-getTheoryGraphDiffR' :: TheoryIdx -> DiffTheoryPath -> Bool -> Handler Text
+getTheoryGraphDiffR' :: TheoryIdx -> DiffTheoryPath -> Bool -> Handler ()
 getTheoryGraphDiffR' idx path mirror = withDiffTheory idx ( \ti -> do
       yesod <- getYesod
       (graphOptions, dotOptions) <- getOptions
-      case imgDiffThyPath
+      img' <- liftIO $ traceExceptions "getTheoryGraphDiffR" $
+        imgDiffThyPath
           (imageFormat yesod)
           -- a.d. TODO should diff theories support JSON output?
           (ocGraphCommand $ outputCmd yesod)
           (cacheDir yesod)
           (dotSystemCompact graphOptions dotOptions)
           (dtiTheory ti) path
+          (mirror)
+      case img' of
+        Nothing -> notFound
+        Just img -> sendFile (fromString . imageFormatMIME $ imageFormat yesod) img)
+
+getTheoryInteractiveGraphDiffR' :: TheoryIdx -> DiffTheoryPath -> Bool -> Handler T.Text
+getTheoryInteractiveGraphDiffR' idx path mirror = withDiffTheory idx ( \ti -> do
+      (graphOptions, dotOptions) <- getOptions
+      case interactiveDotDiffThyPath
+          (dotSystemCompact graphOptions dotOptions)
+          (dtiTheory ti) path
           (mirror) of
         Nothing -> notFound
-        Just dotStr -> return (T.pack dotStr)
-        )
+        Just dotStr -> return (T.pack dotStr))
 
 -- | Get rendered mirror graph for theory and given path.
-getTheoryMirrorDiffR :: TheoryIdx -> DiffTheoryPath -> Handler Text
+getTheoryMirrorDiffR :: TheoryIdx -> DiffTheoryPath -> Handler ()
 getTheoryMirrorDiffR idx path =  getTheoryGraphDiffR' idx path True
+
+-- | Get rendered mirror graph for theory and given path.
+getTheoryInteractiveMirrorDiffR :: TheoryIdx -> DiffTheoryPath -> Handler T.Text
+getTheoryInteractiveMirrorDiffR idx path =  getTheoryInteractiveGraphDiffR' idx path True
 
 -- | Kill a thread (aka 'cancel request').
 getKillThreadR :: Handler RepPlain

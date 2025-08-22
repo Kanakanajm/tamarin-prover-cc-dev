@@ -571,12 +571,13 @@ type RenderUrl = Route (WebUI) -> T.Text
 -- and the ones ending in DR are for the debug view.
 mkYesodData "WebUI" [parseRoutes|
 /                                          RootR                   GET POST
-/thy/trace/#Int/overview/*TheoryPath          OverviewR               GET
+/thy/trace/#Int/overview/*TheoryPath          InteractiveOverviewR               GET
 /thy/trace/#Int/source                           TheorySourceR           GET
 /thy/trace/#Int/message                          TheoryMessageDeductionR GET
 /thy/trace/#Int/main/*TheoryPath              TheoryPathMR            GET
 -- /thy/trace/#Int/debug/*TheoryPath             TheoryPathDR            GET
 /thy/trace/#Int/graph/*TheoryPath             TheoryGraphR            GET
+/thy/trace/#Int/interactive-graph/*TheoryPath             TheoryInteractiveGraphR            GET
 /thy/trace/#Int/autoprove/#SolutionExtractor/#Int/#Bool/*TheoryPath AutoProverR             GET
 /thy/trace/#Int/autoproveAll/#SolutionExtractor/#Int/*TheoryPath AutoProverAllR             GET
 /thy/trace/#Int/next/#String/*TheoryPath      NextTheoryPathR         GET
@@ -587,13 +588,15 @@ mkYesodData "WebUI" [parseRoutes|
 -- /thy/trace/#Int/edit/path/*TheoryPath         EditPathR               GET POST
 /thy/trace/#Int/del/path/*TheoryPath          DeleteStepR             GET
 /thy/trace/#Int/unload                           UnloadTheoryR           GET
-/thy/equiv/#Int/overview/*DiffTheoryPath      OverviewDiffR               GET
+/thy/equiv/#Int/overview/*DiffTheoryPath      InteractiveOverviewDiffR               GET
 /thy/equiv/#Int/source                           TheorySourceDiffR           GET
 /thy/equiv/#Int/message                          TheoryMessageDeductionDiffR GET
 /thy/equiv/#Int/main/*DiffTheoryPath          TheoryPathDiffMR            GET
 -- /thy/equiv/#Int/debug/*DiffTheoryPath             TheoryPathDiffDR            GET
 /thy/equiv/#Int/graph/*DiffTheoryPath         TheoryGraphDiffR            GET
 /thy/equiv/#Int/mirror/*DiffTheoryPath        TheoryMirrorDiffR            GET
+/thy/equiv/#Int/interactive-graph/*DiffTheoryPath         TheoryInteractiveGraphDiffR            GET
+/thy/equiv/#Int/interactive-mirror/*DiffTheoryPath        TheoryInteractiveMirrorDiffR            GET
 /thy/equiv/#Int/autoprove/#SolutionExtractor/#Int/#Side/*DiffTheoryPath AutoProverDiffR             GET
 /thy/equiv/#Int/autoproveAll/#SolutionExtractor/#Int AutoProverAllDiffR             GET
 /thy/equiv/#Int/autoproveDiff/#SolutionExtractor/#Int/*DiffTheoryPath AutoDiffProverR             GET

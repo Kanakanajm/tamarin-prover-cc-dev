@@ -18,6 +18,7 @@ module Web.Theory
 --  , htmlThyDbgPath
   , imgThyPath
   , imgDiffThyPath
+  , interactiveDotDiffThyPath
   , titleThyPath
   , titleDiffThyPath
   , theoryIndex
@@ -176,17 +177,32 @@ applyDiffProverAtPath thy lemmaName proofPath prover =
 
 -- | Reference a dot graph for the given path.
 refDotPath :: HtmlDocument d => RenderUrl -> TheoryIdx -> TheoryPath -> d
-refDotPath renderUrl tidx path = withTag "dot-graph-viz" [("dotsrc", imgPath)] (text "")
+refDotPath renderUrl tidx path = closedTag "img" [("class", "graph"), ("src", imgPath), ("onclick", jsOpenSrcInNewTab)]
   where
     imgPath = T.unpack $ renderUrl (TheoryGraphR tidx path)
+    jsOpenSrcInNewTab = "window.open(this.src, '_blank')"
+
+-- | Reference an interactive dot graph for the given path.
+refDotInteractivePath :: HtmlDocument d => RenderUrl -> TheoryIdx -> TheoryPath -> Bool -> d
+refDotInteractivePath renderUrl tidx path canPopup = withTag "dot-graph-viz" [("dotsrc", dotPath), ("canpop", if canPopup then "true" else "false")] (text "")
+  where
+    dotPath = T.unpack $ renderUrl (TheoryInteractiveGraphR tidx path)
 
 -- | Reference a dot graph for the given diff path.
 refDotDiffPath :: HtmlDocument d => RenderUrl -> TheoryIdx -> DiffTheoryPath -> Bool -> d
-refDotDiffPath renderUrl tidx path mirror = withTag "dot-graph-viz" [("dotsrc", imgPath)] (text "")
+refDotDiffPath renderUrl tidx path mirror = withTag "a" [("href", imgPath), ("target", "_blank")] $ closedTag "img" [("class", "graph"), ("src", imgPath)]
   where
     imgPath = if mirror
               then T.unpack $ renderUrl (TheoryMirrorDiffR tidx path)
               else T.unpack $ renderUrl (TheoryGraphDiffR tidx path)
+    
+-- | Reference an interactive dot graph for the given diff path.
+refDotInteractiveDiffPath :: HtmlDocument d => RenderUrl -> TheoryIdx -> DiffTheoryPath -> Bool -> Bool -> d
+refDotInteractiveDiffPath renderUrl tidx path mirror canPopup= withTag "dot-graph-viz" [("dotsrc", dotPath), ("canpop", if canPopup then "true" else "false")] (text "")
+  where
+    dotPath = if mirror
+              then T.unpack $ renderUrl (TheoryInteractiveMirrorDiffR tidx path)
+              else T.unpack $ renderUrl (TheoryInteractiveGraphDiffR tidx path)
 
 -- | Generate the dot file path for an intermediate dot output.
 getDotPath :: String -> FilePath
@@ -528,14 +544,13 @@ subProofSnippet renderUrl renderImgUrl tidx ti lemma proofPath ctxt prf =
         [ text ""
         , withTag "h3" [] (text "Constraint system")
         ] ++
-        [ refDotPath renderImgUrl tidx (TheoryProof lemma proofPath)
+        [ refDotInteractivePath renderImgUrl tidx (TheoryProof lemma proofPath) True
         | nonEmptyGraph se ]
         ++
         [ preformatted (Just "sequent") (prettyNonGraphSystem se)
         , withTag "h3" [] (text $ nCases ++ " sub-case(s)")
-        ] 
-        -- ++
-        -- subCases
+        ] ++
+        subCases
   where
     prettyApplicableProofMethods sys = case proofMethods sys of
         [] | finishedSubterms ctxt sys  -> [ withTag "h3" [] (text "Constraint System is Solved") ]
@@ -602,13 +617,13 @@ subProofSnippet renderUrl renderImgUrl tidx ti lemma proofPath ctxt prf =
     ranking                 = useHeuristic heuristic depth
     tactic                 = selectTactic (tiAutoProver ti) ctxt
     proofMethods            = rankProofMethods ranking tactic ctxt
-    -- subCases                = concatMap refSubCase $ M.toList $ children prf
-    -- refSubCase (name, prf') =
-    --     [ withTag "h4" [] (text "Case" <-> text name)
-    --     , maybe (text "no proof state available")
-    --             (const $ refDotPath renderUrl tidx $ TheoryProof lemma (proofPath ++ [name]))
-    --             (psInfo $ root prf')
-    --     ]
+    subCases                = concatMap refSubCase $ M.toList $ children prf
+    refSubCase (name, prf') =
+        [ withTag "h4" [] (text "Case" <-> text name)
+        , maybe (text "no proof state available")
+                (const $ (refDotInteractivePath renderUrl tidx $ TheoryProof lemma (proofPath ++ [name])) True)
+                (psInfo $ root prf')
+        ]
 
 -- | A snippet that explains a sub-proof by displaying its proof state, the
 -- open-goals, and the new cases.
@@ -631,7 +646,7 @@ subProofDiffSnippet renderUrl tidx ti s lemma proofPath ctxt prf =
         [ text ""
         , withTag "h3" [] (text "Constraint system")
         ] ++
-        [ refDotDiffPath renderUrl tidx (DiffTheoryProof s lemma proofPath) False
+        [ refDotInteractiveDiffPath renderUrl tidx (DiffTheoryProof s lemma proofPath) False True
         | nonEmptyGraph se ]
         ++
         [ preformatted (Just "sequent") (prettyNonGraphSystem se)
@@ -700,7 +715,7 @@ subProofDiffSnippet renderUrl tidx ti s lemma proofPath ctxt prf =
     refSubCase (name, prf') =
         [ withTag "h4" [] (text "Case" <-> text name)
         , maybe (text "no proof state available")
-                (const $ refDotDiffPath renderUrl tidx (DiffTheoryProof s lemma (proofPath ++ [name])) False)
+                (const $ refDotInteractiveDiffPath renderUrl tidx (DiffTheoryProof s lemma (proofPath ++ [name])) False True) 
                 (psInfo $ root prf')
         ]
 
@@ -724,7 +739,7 @@ subDiffProofSnippet renderUrl tidx ti lemma proofPath ctxt prf =
         [ text ""
         , withTag "h3" [] (text "Constraint system")
         ] ++
-        [ refDotDiffPath renderUrl tidx (DiffTheoryDiffProof lemma proofPath) False
+        [ refDotInteractiveDiffPath renderUrl tidx (DiffTheoryDiffProof lemma proofPath) False True
         | nonEmptyGraphDiff se ]
         ++
         mirrorSystem
@@ -755,16 +770,16 @@ subDiffProofSnippet renderUrl tidx ti lemma proofPath ctxt prf =
     mirrorSystem =
         if dpsMethod (root prf) == DiffMirrored
            then [ text "", withTag "h3" [] (text "mirror:") ] ++
-                [ refDotDiffPath renderUrl tidx (DiffTheoryDiffProof lemma proofPath) True ] ++
+                [ refDotInteractiveDiffPath renderUrl tidx (DiffTheoryDiffProof lemma proofPath) True True] ++
                 [ text "" ]
         else if dpsMethod (root prf) == DiffAttack
            then [ text "", withTag "h3" [] (text "attack:") ] ++
-                [ refDotDiffPath renderUrl tidx (DiffTheoryDiffProof lemma proofPath) True ] ++
+                [ refDotInteractiveDiffPath renderUrl tidx (DiffTheoryDiffProof lemma proofPath) True True] ++
                 [ text "(If no attack graph is shown, the current graph has no mirrors. If one of the mirror graphs violates a restriction, this graph is shown.)" ] ++
                 [ text "" ]
         else if dpsMethod (root prf) == DiffUnfinishable
            then [ text "", withTag "h3" [] (text "mirror:") ] ++
-                [ refDotDiffPath renderUrl tidx (DiffTheoryDiffProof lemma proofPath) True ] ++
+                [ refDotInteractiveDiffPath renderUrl tidx (DiffTheoryDiffProof lemma proofPath) True True] ++
                 [ text "The proof cannot be finished as there are reducible operators at the top of subterms in the subterm store." ] ++
                 [ text "" ]
            else []
@@ -812,7 +827,7 @@ subDiffProofSnippet renderUrl tidx ti lemma proofPath ctxt prf =
     refSubCase (name, prf') =
         [ withTag "h4" [] (text "Case" <-> text name)
         , maybe (text "no proof state available")
-                (const $ refDotDiffPath renderUrl tidx (DiffTheoryDiffProof lemma (proofPath ++ [name])) False)
+                (const $ refDotInteractiveDiffPath renderUrl tidx (DiffTheoryDiffProof lemma (proofPath ++ [name])) False True)
                 (dpsInfo $ root prf')
         ]
 
@@ -836,7 +851,7 @@ htmlSource renderUrl tidx kind (j, th) =
       [ withTag "h3" [] $ fsep [ text "Source", int i, text "of", nCases
                                , text " / named ", doubleQuotes (text name),
                                  if isPartial then text "(partial deconstructions)" else text "" ]
-      , refDotPath renderUrl tidx (TheorySource kind j i)
+      , refDotInteractivePath renderUrl tidx (TheorySource kind j i) False
       , withTag "p" [] $ ppPrem
       , wrapP $ prettyNonGraphSystem se
       ]
@@ -864,7 +879,7 @@ htmlSourceDiff renderUrl tidx s kind d (j, th) =
       [ withTag "h3" [] $ fsep [ text "Source", int i, text "of", nCases
                                , text " / named ", doubleQuotes (text name),
                                  if isPartial then text "(partial deconstructions)" else text "" ]
-      , refDotDiffPath renderUrl tidx (DiffTheorySource s kind d j i) False
+      , refDotInteractiveDiffPath renderUrl tidx (DiffTheorySource s kind d j i) False False
       , withTag "p" [] ppPrem
       , wrapP $ prettyNonGraphSystem se
       ]
@@ -1280,32 +1295,6 @@ htmlThyDbgPath thy path = go path
     go _ = Nothing
 -}
 
-dotGraphString :: (System -> D.Dot ())         -- ^ Function to render a System to Graphviz dot format.
-           -> ClosedTheory                 -- ^ Theory from which to extract the 'System'.
-           -> TheoryPath                   -- ^ Path of the 'System' in the theory.
-           -> Maybe String                       -- ^ Return .dot graph definition as a raw string 
-dotGraphString toDot thy thyPath = do
-  (jsonLabel, system) <- thyPathSystem thyPath
-  return (D.showDot "G" (toDot system))
-  where
-    thyPathSystem :: TheoryPath -> Maybe (String, System)
-    thyPathSystem (TheorySource k i j)          = casesSystem k i j
-    thyPathSystem (TheoryProof lemma proofPath) = proofPathSystem lemma proofPath
-    thyPathSystem _                             = error "Unhandled theory path. This is a bug."
-
-    -- | Get a string serialization for one case.
-    casesSystem k i j = do
-      let jsonLabel = "Theory: " ++ (get thyName thy) ++ " Case: " ++ show i ++ ":" ++ show j
-          cases = map (getDisj . get cdCases) (getSource k thy)
-      return (jsonLabel, snd $ cases !! (i-1) !! (j-1))
-
-    -- | Get string serialization for proof path in lemma.
-    proofPathSystem lemma proofPath = do
-      let jsonLabel = "Theory: " ++ (get thyName thy) ++ " Lemma: " ++ lemma 
-      subProof <- resolveProofPath thy lemma proofPath
-      sequent <- psInfo $ root subProof
-      return (jsonLabel, sequent)
-
 -- | Output either JSON or an image corresponding to the given theory path and return the generated file's path.
 -- Returns Nothing if there was an error during the image generation.
 imgThyPath :: ImageFormat                  -- ^ The preferred image output format. 
@@ -1430,14 +1419,14 @@ imgDiffThyPath :: ImageFormat
            -> (System -> D.Dot ())
            -> ClosedDiffTheory
            -> DiffTheoryPath
-           -> Bool                   -- ^ True if we want the mirror graph
-           -> Maybe String        
+           -> Bool
+           -> IO (Maybe FilePath)            -- ^ True if we want the mirror graph
 imgDiffThyPath imgFormat dotCommand cacheDir_ compact thy path mirror = go path
   where
-    go (DiffTheorySource s k d i j) = Just $ casesDotCode s k i j d
-    go (DiffTheoryProof s l p)      = Just $ proofPathDotCode s l p
-    go (DiffTheoryDiffProof l p)    = Just $ proofPathDotCodeDiff l p mirror
-    go _                            = Nothing
+    go (DiffTheorySource s k d i j) = renderDotCode (casesDotCode s k i j d)
+    go (DiffTheoryProof s l p)      = renderDotCode (proofPathDotCode s l p)
+    go (DiffTheoryDiffProof l p)    = renderDotCode (proofPathDotCodeDiff l p mirror)
+    go _                            = error "Unhandled theory path. This is a bug."
 
     -- Prefix dot code with comment mentioning all protocol rule names
     prefixedShowDot dot = unlines
@@ -1482,8 +1471,116 @@ imgDiffThyPath imgFormat dotCommand cacheDir_ compact thy path mirror = go path
           else do
             sequent <- get dsSystem diffSequent
             return $ compact sequent
-      
 
+    -- Render a piece of dot code
+    renderDotCode code = do
+      let dotPath = cacheDir_ </> getDotPath code
+          imgPath = addExtension dotPath (show imgFormat)
+
+          -- A busy wait loop with a maximal number of iterations
+          renderedOrRendering :: Int -> IO Bool
+          renderedOrRendering n = do
+              dotExists <- doesFileExist dotPath
+              imgExists <- doesFileExist imgPath
+              if (n > 0 && dotExists && not imgExists)
+                  then do threadDelay (10 * 1000) -- wait 10 ms
+                          renderedOrRendering (n - 1)
+                  else return imgExists
+
+      -- Ensure that the output directory exists.
+      createDirectoryIfMissing True (takeDirectory dotPath)
+
+      imgGenerated <- firstSuccess
+          [ -- There might be some other thread that rendered or is rendering
+            -- this dot file. We wait at most 50 iterations (0.5 sec timout)
+            -- for this other thread to render the image. Afterwards, we give
+            -- it a try by ourselves.
+            renderedOrRendering 50
+            -- create dot-file and render to image
+          , do writeFile dotPath code
+               dotToImg "dot" dotPath imgPath
+            -- sometimes 'dot' fails => use 'fdp' as a backup tool
+          , dotToImg "fdp" dotPath imgPath
+          ]
+      if imgGenerated
+        then return $ Just imgPath
+        else trace ("WARNING: failed to convert:\n  '" ++ dotPath ++ "'")
+                   (return Nothing)
+
+    dotToImg dotMode dotFile imgFile = do
+      (ecode,_out,err) <- readProcessWithExitCode dotCommand
+                              [ "-T"++show imgFormat, "-K"++dotMode, "-o",imgFile, dotFile]
+                              ""
+      case ecode of
+        ExitSuccess   -> return True
+        ExitFailure i -> do
+          putStrLn $ "dotToImg: "++dotCommand++" failed with code "
+                      ++show i++" for file "++dotFile++":\n"++err
+          return False
+
+    firstSuccess []     = return False
+    firstSuccess (m:ms) = do
+      s <- m
+      if s then return True else firstSuccess ms
+
+-- | Render the .dot graph definition for the given theory path.
+-- Returns Nothing if there was an error during the process.
+interactiveDotDiffThyPath :: (System -> D.Dot ())
+           -> ClosedDiffTheory
+           -> DiffTheoryPath   
+           -> Bool                    -- ^ True if we want the mirror graph
+           -> Maybe String 
+interactiveDotDiffThyPath compact thy path mirror = go path
+  where
+    go (DiffTheorySource s k d i j) = Just $ casesDotCode s k i j d
+    go (DiffTheoryProof s l p)      = Just $ proofPathDotCode s l p
+    go (DiffTheoryDiffProof l p)    = Just $ proofPathDotCodeDiff l p mirror
+    go _                            = Nothing
+
+
+    -- Prefix dot code with comment mentioning all protocol rule names
+    prefixedShowDot dot = unlines
+        [ "// protocol rules: "          ++ ruleList (getProtoRuleEsDiff LHS thy) -- FIXME RS: the rule names are the same on LHS and RHS, so we just pick LHS; should pass the current Side through to make this clean
+        , "// message deduction rules: " ++ ruleList (getIntrVariantsDiff LHS thy) -- FIXME RS: the intruder rule names are the same on LHS and RHS; should pass the current Side through to make this clean
+--        , "// message deduction rules: " ++ ruleList ((intruderRules . get (_crcRules . diffThyCacheLeft)) thy) -- FIXME RS: again, we arbitrarily pick the LHS version of the cache, should be the same on both sides
+--intruderRules . L.get (crcRules . diffThyCacheLeft)
+        , D.showDot "G" dot
+        ]
+      where
+        ruleList :: HasRuleName (Rule i) => [Rule i] -> String
+        ruleList = concat . intersperse ", " . nub . map showRuleCaseName
+
+    -- Get dot code for required cases
+    casesDotCode s k i j isdiff = prefixedShowDot $
+        compact $ snd $ cases !! (i-1) !! (j-1)
+      where
+        cases = map (getDisj . get cdCases) (getDiffSource s isdiff k thy)
+
+    -- Get dot code for proof path in lemma
+    proofPathDotCode s lemma proofPath =
+      D.showDot "G" $ fromMaybe (return ()) $ do
+        subProof <- resolveProofPathDiff thy s lemma proofPath
+        sequent <- psInfo $ root subProof
+        return $ compact sequent
+
+    -- Get dot code for proof path in lemma
+    proofPathDotCodeDiff lemma proofPath mir =
+      D.showDot "G" $ fromMaybe (return ()) $ do
+        subProof <- resolveProofPathDiffLemma thy lemma proofPath
+        diffSequent <- dpsInfo $ root subProof
+        if mir
+          then do
+            lem <- lookupDiffLemma lemma thy
+            let ctxt = getDiffProofContext lem thy
+            side <- get dsSide diffSequent
+            let isSolved s sys' = (rankProofMethods GoalNrRanking [defaultTactic] (eitherProofContext ctxt s) sys') == [] -- checks if the system is solved
+            nsequent <- get dsSystem diffSequent
+            -- Here we can potentially get Nothing if there is no mirror DG
+            let sequentList = snd $ getMirrorDGandEvaluateRestrictions ctxt diffSequent (isSolved side nsequent)
+            if null sequentList then Nothing else return $ compact $ head sequentList
+          else do
+            sequent <- get dsSystem diffSequent
+            return $ compact sequent
 
 -- | Get title to display for a given proof path.
 titleThyPath :: ClosedTheory -> TheoryPath -> String
@@ -2108,3 +2205,29 @@ annotateDiffLemmaProof lem =
       UnfinishableProof -> Yellow
       TraceFound        -> Red
       CompleteProof     -> Green
+
+dotGraphString :: (System -> D.Dot ())     -- ^ Function to render a System to Graphviz dot format.
+           -> ClosedTheory                 -- ^ Theory from which to extract the 'System'.
+           -> TheoryPath                   -- ^ Path of the 'System' in the theory.
+           -> Maybe String                 -- ^ Return .dot graph definition as a raw string 
+dotGraphString toDot thy thyPath = do
+  (_, system) <- thyPathSystem thyPath
+  return (D.showDot "G" (toDot system))
+  where
+    thyPathSystem :: TheoryPath -> Maybe (String, System)
+    thyPathSystem (TheorySource k i j)          = casesSystem k i j
+    thyPathSystem (TheoryProof lemma proofPath) = proofPathSystem lemma proofPath
+    thyPathSystem _                             = error "Unhandled theory path. This is a bug."
+
+    -- | Get a string serialization for one case.
+    casesSystem k i j = do
+      let jsonLabel = "Theory: " ++ (get thyName thy) ++ " Case: " ++ show i ++ ":" ++ show j
+          cases = map (getDisj . get cdCases) (getSource k thy)
+      return (jsonLabel, snd $ cases !! (i-1) !! (j-1))
+
+    -- | Get string serialization for proof path in lemma.
+    proofPathSystem lemma proofPath = do
+      let jsonLabel = "Theory: " ++ (get thyName thy) ++ " Lemma: " ++ lemma 
+      subProof <- resolveProofPath thy lemma proofPath
+      sequent <- psInfo $ root subProof
+      return (jsonLabel, sequent)
