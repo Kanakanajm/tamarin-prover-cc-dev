@@ -226,10 +226,17 @@ export class DotGraphViz extends HTMLElement {
    */
   render = (dotString: string) => {
     instance().then(viz => {
-      // Clear component's children.
+      
+      /* Resetting all the components */
       this.innerHTML = "";
-
-      //
+      this.svg = undefined;
+      this.svgg = null;
+       this.highlightConnections = { nodes: [], edges: [] };
+      this.minimizableObjects = {
+        edges: {},
+        nodes: {}
+      };
+     
       if (!this.isPopup && this.isPopupOpen()) {
         const closePopupBtn = document.createElement("button");
         closePopupBtn.textContent = "Pop-in";
@@ -240,7 +247,6 @@ export class DotGraphViz extends HTMLElement {
         this.appendChild(closePopupBtn);
         return;
       }
-
 
       this.svg = viz.renderSVGElement(dotString);
       this.json = viz.renderJSON(dotString) as VizGraph;
@@ -287,7 +293,7 @@ export class DotGraphViz extends HTMLElement {
       this.initTransform = `translate(${translate.matrix.e} ${translate.matrix.f})`;
 
       // create zoom behavior
-      const zoomBehavior = zoom<SVGSVGElement, unknown>().scaleExtent([0.5, 2]).on("zoom", this.handleZoom)
+      const zoomBehavior = zoom<SVGSVGElement, unknown>().scaleExtent([0.5, 3]).on("zoom", this.handleZoom)
       // register zoom behavior
       select(this.svg).call(zoomBehavior);
 
@@ -336,8 +342,7 @@ export class DotGraphViz extends HTMLElement {
           y: abbrevTblElBBox.height + abbrevTblElBBox.y
         }
 
-        // inserting a rect box before the text 
-        // reference: https://d3js.org/d3-selection/modifying#selection_insert
+        // inserting a rectangle box before the text 
         abbrevTbl.insert("rect", "text")
           .attr("width", abbrevTblElBBox.width)
           .attr("height", abbrevTblElBBox.height)
@@ -347,9 +352,7 @@ export class DotGraphViz extends HTMLElement {
         abbrevTbl
           .attr("transform", `${this.initTransform} translate(${dx} ${dy}) translate(${abbrevTblBottomRightPoint.x} ${abbrevTblBottomRightPoint.y}) scale(${ABBREVIATION_TABLE_SCALE}) translate(${-abbrevTblBottomRightPoint.x} ${-abbrevTblBottomRightPoint.y})`);
 
-        abbrevTbl.remove();
         this.svg.appendChild(abbrevTblEl);
-
       }
 
     });
@@ -373,7 +376,6 @@ export class DotGraphViz extends HTMLElement {
     if (popup) {
       // after popup open successfully,
       // remove all children (the whole graph)
-
       localStorage.setItem(LS_ISPOPUPOPEN, "true");
       this.renderSource();
 
@@ -382,6 +384,9 @@ export class DotGraphViz extends HTMLElement {
     }
   }
 
+  /*
+    Fetchs the dot graph string  
+  */
   fetchDotString = (url: string): Promise<string> => {
     const { promise, resolve, reject } = Promise.withResolvers<string>();
 
@@ -425,9 +430,7 @@ export class DotGraphViz extends HTMLElement {
         }
       }
     }
-
     // minimizable edges
-
   };
 
   minimizeNode = (g: SVGGElement): SVGGElement => {
@@ -453,7 +456,7 @@ export class DotGraphViz extends HTMLElement {
     // Shorten action text
     const actualText = actionText.text ?
       actionText.text.indexOf("[") >= 0 ?
-        actionText.text.slice(0, actionText.text.indexOf("[")) + "[...]"
+        actionText.text.slice(0, actionText.text.indexOf("[")) + ""
         : actionText.text
       : "default";
 
@@ -597,6 +600,9 @@ export class DotGraphViz extends HTMLElement {
     return minimized.node()!; // I just created it so its node() must be non-null
   }
 
+  /*
+    Responsible for handling zoom events for the graph
+  */
   handleZoom = (event: D3ZoomEvent<SVGSVGElement, unknown>) => {
     if (!this.svgg)
       return;
@@ -642,6 +648,9 @@ export class DotGraphViz extends HTMLElement {
     this.highlight();
   };
 
+  /*
+    When a node is clicked, all the downward connections (including the edges) of the node are highlighted.
+  */
   handleNodeClick = (event: MouseEvent) => {
     if (!this.graph)
       return;
@@ -652,6 +661,9 @@ export class DotGraphViz extends HTMLElement {
     this.highlight();
   };
 
+  /*
+    When an abbreviation is clicked in the table, all graph nodes containing that abbreviation are highlighted. 
+  */
   handleAbbreviationTextClick = (event: MouseEvent) => {
 
     if (!this.graph)
@@ -687,6 +699,9 @@ export class DotGraphViz extends HTMLElement {
     }
   }
 
+  /*
+    Clear the highlighted edges and nodes of the graph
+  */
   clearHighlight = () => {
     if (!this.svgg)
       return;
