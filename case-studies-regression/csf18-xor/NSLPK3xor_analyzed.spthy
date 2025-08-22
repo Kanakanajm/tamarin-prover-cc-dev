@@ -141,7 +141,6 @@ guarded formula characterizing all counter-examples:
 */
 induction
   case non_empty_trace
-  simplify
   solve( (∃ ni m1 #i.
            (IN_R_1_ni( ni, m1 ) @ #i)
           ∧
@@ -339,10 +338,10 @@ qed
 
 /*
 Generated from:
-Tamarin version 1.9.0
+Tamarin version 1.11.0
 Maude version 3.4
-Git revision: f187584ba8325431d43d5e0a58baa381ac2c3f47, branch: develop
-Compiled at: 2024-10-29 14:19:56.449404967 UTC
+Git revision: a288673cab40b1e997ba23b077ef491d39c2bef6 (with uncommited changes), branch: fix-issue713
+Compiled at: 2025-06-18 14:31:09.981542 UTC
 */
 
 end
@@ -354,9 +353,9 @@ summary of summaries:
 analyzed: examples/csf18-xor/NSLPK3xor.spthy
 
   output:          examples/csf18-xor/NSLPK3xor.spthy.tmp
-  processing time: 2.50s
+  processing time: 1.48s
   
-  types (all-traces): falsified - found trace (13 steps)
+  types (all-traces): falsified - found trace (12 steps)
   nonce_secrecy (all-traces): falsified - found trace (11 steps)
   injective_agree (all-traces): falsified - found trace (13 steps)
   session_key_setup_possible (exists-trace): verified (6 steps)

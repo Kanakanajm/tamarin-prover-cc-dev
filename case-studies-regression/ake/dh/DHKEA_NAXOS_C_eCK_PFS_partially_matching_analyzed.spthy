@@ -2210,7 +2210,7 @@ solve( Accept( s1, k ) @ #i1 )
                                  'g'^h1(<~ex, ~ea>), Y, 'NAXOS_C'>))
                ) ▶₀ #i2 )
           case Resp_NAXOS_1
-          solve( Sid( ~ex, <A.1, B.1, com, role1, 'NAXOS_C'> ) @ #i1 )
+          solve( Sid( ~ex, <A.2, B.2, com, role1, 'NAXOS_C'> ) @ #i1 )
             case Init_NAXOS_2
             solve( Sid( ~ey,
                         <$B, $A, 
@@ -5225,10 +5225,10 @@ Derivation Checks
 
 /*
 Generated from:
-Tamarin version 1.9.0
+Tamarin version 1.11.0
 Maude version 3.4
-Git revision: f187584ba8325431d43d5e0a58baa381ac2c3f47, branch: develop
-Compiled at: 2024-10-29 14:19:56.449404967 UTC
+Git revision: a288673cab40b1e997ba23b077ef491d39c2bef6 (with uncommited changes), branch: fix-issue713
+Compiled at: 2025-06-18 14:31:09.981542 UTC
 */
 
 end
@@ -5240,7 +5240,7 @@ summary of summaries:
 analyzed: examples/ake/dh/DHKEA_NAXOS_C_eCK_PFS_partially_matching.spthy
 
   output:          examples/ake/dh/DHKEA_NAXOS_C_eCK_PFS_partially_matching.spthy.tmp
-  processing time: 50.51s
+  processing time: 30.22s
   
   WARNING: 1 wellformedness check failed!
            The analysis results might be wrong!

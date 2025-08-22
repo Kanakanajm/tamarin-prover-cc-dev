@@ -3,7 +3,7 @@ theory NAXOS_eCK begin
 // Function signature and definition of the equational theory E
 
 builtins: diffie-hellman
-functions: fst/1, h1/1, h2/1, pair/2, sk/1[private,destructor], snd/1
+functions: fst/1, h1/1, h2/1, pair/2, sk/1[private,constructor], snd/1
 equations: fst(<x.1, x.2>) = x.1, snd(<x.1, x.2>) = x.2
 
 
@@ -329,7 +329,7 @@ solve( (∃ matchingSession #i3 matchingRole.
             case Init_1
             solve( Sid( matchingSession,
                         <$B, $A, Y, 'g'^h1(<~ex, sk($A)>), matchingRole>
-                   ) @ #i3 )
+                   ) @ #i3.1 )
               case Init_2
               by contradiction /* from formulas */
             next
@@ -426,7 +426,7 @@ solve( (∃ matchingSession #i3 matchingRole.
         case Resp_1
         solve( Sid( matchingSession,
                     <$A, $B, X, 'g'^h1(<~ey, sk($B)>), matchingRole>
-               ) @ #i3 )
+               ) @ #i3.1 )
           case Init_2
           solve( Init_1( ~ex, $A, $B ) ▶₀ #i3 )
             case Init_1
@@ -603,10 +603,10 @@ qed
 
 /*
 Generated from:
-Tamarin version 1.9.0
+Tamarin version 1.11.0
 Maude version 3.4
-Git revision: f187584ba8325431d43d5e0a58baa381ac2c3f47, branch: develop
-Compiled at: 2024-10-29 14:19:56.449404967 UTC
+Git revision: b954f6565e030d682d7951db74b7033939ef638b (with uncommited changes), branch: develop
+Compiled at: 2025-06-06 08:30:52.256236371 UTC
 */
 
 end
@@ -618,7 +618,7 @@ summary of summaries:
 analyzed: examples/features//private_function_symbols/NAXOS_eCK_private.spthy
 
   output:          examples/features//private_function_symbols/NAXOS_eCK_private.spthy.tmp
-  processing time: 1.07s
+  processing time: 1.35s
   
   eCK_key_secrecy (all-traces): verified (89 steps)
 

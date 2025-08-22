@@ -343,7 +343,6 @@ induction
   by contradiction /* from formulas */
 next
   case non_empty_trace
-  simplify
   solve( (∃ m #decrypt.
            (Decrypt( m ) @ #decrypt)
           ∧
@@ -7857,7 +7856,6 @@ induction
   by contradiction /* from formulas */
 next
   case non_empty_trace
-  simplify
   solve( (∀ d c C #before #later.
            (DCtrIs( d, c ) @ #before) ∧ (DCtrIs( d, C ) @ #later)
           ⇒
@@ -10677,7 +10675,6 @@ induction
   by contradiction /* from formulas */
 next
   case non_empty_trace
-  simplify
   solve( (∃ k l h #keyCreate #keyKU.
            (CreateKey( k, h, l ) @ #keyCreate) ∧ (!KU( k ) @ #keyKU))  ∥
          (∃ d k l h #keyImport.
@@ -12531,10 +12528,10 @@ qed
 
 /*
 Generated from:
-Tamarin version 1.9.0
+Tamarin version 1.11.0
 Maude version 3.4
-Git revision: f187584ba8325431d43d5e0a58baa381ac2c3f47, branch: develop
-Compiled at: 2024-10-29 14:19:56.449404967 UTC
+Git revision: a288673cab40b1e997ba23b077ef491d39c2bef6 (with uncommited changes), branch: fix-issue713
+Compiled at: 2025-06-18 14:31:09.981542 UTC
 */
 
 end
@@ -12546,13 +12543,13 @@ summary of summaries:
 analyzed: examples/csf19-wrapping/siv.spthy
 
   output:          examples/csf19-wrapping/siv.spthy.tmp
-  processing time: 75.51s
+  processing time: 51.03s
   
-  origin (all-traces): verified (2087 steps)
-  Counter_Monotonicity (all-traces): verified (876 steps)
+  origin (all-traces): verified (2086 steps)
+  Counter_Monotonicity (all-traces): verified (875 steps)
   IV_Uniqueness (all-traces): verified (12 steps)
   Key_UsageImpliesInitialization (all-traces): verified (86 steps)
-  Key_IntegrityAndConfidentiality (all-traces): verified (427 steps)
+  Key_IntegrityAndConfidentiality (all-traces): verified (426 steps)
   Key_UniqueLevelandHandle (all-traces): verified (170 steps)
 
 ==============================================================================

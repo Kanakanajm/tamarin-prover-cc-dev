@@ -92,7 +92,6 @@ induction
   by contradiction /* from formulas */
 next
   case non_empty_trace
-  simplify
   solve( (last(#i))  ∥
          (∃ #j. (!KU( pub ) @ #j) ∧ (¬(last(#j))) ∧ (#j < #i))  ∥
          (∃ #j. (Out_Initiator( m ) @ #j) ∧ ¬(last(#j)))  ∥
@@ -285,22 +284,22 @@ WARNING: the following wellformedness checks failed!
 Formula terms
 =============
 
-  lemma `type_assertion' uses terms of the wrong form:
+  Lemma `type_assertion' uses terms of the wrong form:
     `snd(Bound 1)', `snd(sdec(Bound 3,Bound 2))'
   
-  The only allowed terms are public names and bound node and message
-  variables. If you encounter free message variables, then you might
-  have forgotten a #-prefix. Sort prefixes can only be dropped where
-  this is unambiguous. Moreover, reducible function symbols are
-  disallowed.
+  The only allowed terms are public constants and bound node and
+  message variables. If you encounter free message variables, then
+  you might have forgotten a #-prefix. Sort prefixes can only be
+  dropped where this is unambiguous. Moreover, reducible function
+  symbols are disallowed.
 */
 
 /*
 Generated from:
-Tamarin version 1.9.0
+Tamarin version 1.11.0
 Maude version 3.4
-Git revision: f187584ba8325431d43d5e0a58baa381ac2c3f47, branch: develop
-Compiled at: 2024-10-29 14:19:56.449404967 UTC
+Git revision: b954f6565e030d682d7951db74b7033939ef638b (with uncommited changes), branch: develop
+Compiled at: 2025-06-06 08:30:52.256236371 UTC
 */
 
 end
@@ -312,12 +311,12 @@ summary of summaries:
 analyzed: examples/loops/Typing_and_Destructors.spthy
 
   output:          examples/loops/Typing_and_Destructors.spthy.tmp
-  processing time: 0.20s
+  processing time: 0.25s
   
   WARNING: 1 wellformedness check failed!
            The analysis results might be wrong!
   
-  type_assertion (all-traces): verified (27 steps)
+  type_assertion (all-traces): verified (26 steps)
   Responder_secrecy (all-traces): verified (17 steps)
   Public_part_public (exists-trace): verified (5 steps)
 

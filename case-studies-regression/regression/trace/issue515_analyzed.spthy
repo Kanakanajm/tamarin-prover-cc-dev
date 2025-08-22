@@ -49,40 +49,40 @@ WARNING: the following wellformedness checks failed!
 Reserved names
 ==============
 
-  rule `test' contains facts with reserved names on left-hand-side:
+  Rule `test' contains facts with reserved names on left-hand-side:
     K( x )
   
-  rule `test' contains facts with reserved names on the middle:
+  Rule `test' contains facts with reserved names on the middle:
     !KU( x )
   
-  rule `test' contains facts with reserved names on the right-hand-side:
+  Rule `test' contains facts with reserved names on the right-hand-side:
     !KD( x )
   
-  rule `test2' contains facts with reserved names on the middle:
+  Rule `test2' contains facts with reserved names on the middle:
     !KD( x )
   
-  rule `test3' contains facts with reserved names on left-hand-side:
+  Rule `test3' contains facts with reserved names on left-hand-side:
     K( x )
   
-  rule `test3' contains facts with reserved names on the middle:
+  Rule `test3' contains facts with reserved names on the middle:
     In( x )
   
-  rule `test3' contains facts with reserved names on the right-hand-side:
+  Rule `test3' contains facts with reserved names on the right-hand-side:
     K( x )
   
-  rule `test4' contains facts with reserved names on left-hand-side:
+  Rule `test4' contains facts with reserved names on left-hand-side:
     !KU( x )
   
-  rule `test4' contains facts with reserved names on the middle:
+  Rule `test4' contains facts with reserved names on the middle:
     !KU( x )
   
-  rule `test5' contains facts with reserved names on left-hand-side:
+  Rule `test5' contains facts with reserved names on left-hand-side:
     !KD( x )
   
-  rule `test5' contains facts with reserved names on the middle:
+  Rule `test5' contains facts with reserved names on the middle:
     !KD( x )
   
-  rule `test5' contains facts with reserved names on the right-hand-side:
+  Rule `test5' contains facts with reserved names on the right-hand-side:
     !KU( x )
 
 Special facts
@@ -97,10 +97,10 @@ Special facts
 
 /*
 Generated from:
-Tamarin version 1.9.0
+Tamarin version 1.11.0
 Maude version 3.4
-Git revision: f187584ba8325431d43d5e0a58baa381ac2c3f47, branch: develop
-Compiled at: 2024-10-29 14:19:56.449404967 UTC
+Git revision: a288673cab40b1e997ba23b077ef491d39c2bef6 (with uncommited changes), branch: fix-issue713
+Compiled at: 2025-06-18 14:31:09.981542 UTC
 */
 
 end

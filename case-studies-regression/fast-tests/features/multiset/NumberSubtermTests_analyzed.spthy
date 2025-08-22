@@ -208,16 +208,16 @@ WARNING: the following wellformedness checks failed!
 Reserved names
 ==============
 
-  rule `InOut' contains facts with reserved names on the middle:
+  Rule `InOut' contains facts with reserved names on the middle:
     Out( <(%x%+%1%+%1), %1, %1, %x, (%x%+%1), (%x%+%1)> )
 */
 
 /*
 Generated from:
-Tamarin version 1.9.0
+Tamarin version 1.11.0
 Maude version 3.4
-Git revision: f187584ba8325431d43d5e0a58baa381ac2c3f47, branch: develop
-Compiled at: 2024-10-29 14:19:56.449404967 UTC
+Git revision: b954f6565e030d682d7951db74b7033939ef638b (with uncommited changes), branch: develop
+Compiled at: 2025-06-06 08:30:52.256236371 UTC
 */
 
 end
@@ -229,7 +229,7 @@ summary of summaries:
 analyzed: examples/features//multiset/NumberSubtermTests.spthy
 
   output:          examples/features//multiset/NumberSubtermTests.spthy.tmp
-  processing time: 0.21s
+  processing time: 0.26s
   
   WARNING: 1 wellformedness check failed!
            The analysis results might be wrong!
