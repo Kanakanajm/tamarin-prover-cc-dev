@@ -1535,7 +1535,7 @@ interactiveDotDiffThyPath compact thy path mirror = go path
     casesDotCode s k i j isdiff = prefixedShowDot $
         compact $ snd $ cases !! (i-1) !! (j-1)
       where
-        cases = map (getDisj . get cdCases) (getDiffSource s isdiff k thy)
+        cases = map (getDisj . (._cdCases)) (getDiffSource s isdiff k thy)
 
     -- Get dot code for proof path in lemma
     proofPathDotCode s lemma proofPath =
@@ -1553,15 +1553,14 @@ interactiveDotDiffThyPath compact thy path mirror = go path
           then do
             lem <- lookupDiffLemma lemma thy
             let ctxt = getDiffProofContext lem thy
-            side <- get dsSide diffSequent
-            let isSolved s sys' = (rankProofMethods GoalNrRanking [defaultTactic] (eitherProofContext ctxt s) sys') == [] -- checks if the system is solved
-            nsequent <- get dsSystem diffSequent
+            side <- diffSequent._dsSide
+            let isSolved s sys' = null $ rankProofMethods GoalNrRanking [defaultTactic] (eitherProofContext ctxt s) sys' -- checks if the system is solved
+            nsequent <- diffSequent._dsSystem
             -- Here we can potentially get Nothing if there is no mirror DG
             let sequentList = snd $ getMirrorDGandEvaluateRestrictions ctxt diffSequent (isSolved side nsequent)
             if null sequentList then Nothing else return $ compact $ head sequentList
           else do
-            sequent <- get dsSystem diffSequent
-            return $ compact sequent
+            compact <$> diffSequent._dsSystem
 
 -- | Get title to display for a given proof path.
 titleThyPath :: ClosedTheory -> TheoryPath -> String
@@ -2212,13 +2211,13 @@ dotGraphString toDot thy thyPath = do
 
     -- | Get a string serialization for one case.
     casesSystem k i j = do
-      let jsonLabel = "Theory: " ++ (get thyName thy) ++ " Case: " ++ show i ++ ":" ++ show j
-          cases = map (getDisj . get cdCases) (getSource k thy)
+      let jsonLabel = "Theory: " ++ thy._thyName ++ " Case: " ++ show i ++ ":" ++ show j
+          cases = map (getDisj . (._cdCases)) (getSource k thy)
       return (jsonLabel, snd $ cases !! (i-1) !! (j-1))
 
     -- | Get string serialization for proof path in lemma.
     proofPathSystem lemma proofPath = do
-      let jsonLabel = "Theory: " ++ (get thyName thy) ++ " Lemma: " ++ lemma 
+      let jsonLabel = "Theory: " ++ thy._thyName ++ " Lemma: " ++ lemma
       subProof <- resolveProofPath thy lemma proofPath
       sequent <- psInfo $ root subProof
       return (jsonLabel, sequent)

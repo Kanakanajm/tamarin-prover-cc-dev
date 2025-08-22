@@ -717,7 +717,7 @@ getTheoryVerifyR  idx (TheoryProof l path) = do
     idx' <- editProof idx l
     renderUrl <- getUrlRender
     case idx' of
-        Right i -> pure $ RepJson $ toContent $ object ["redirect" .= renderUrl (OverviewR i (TheoryProof l path))]
+        Right i -> pure $ RepJson $ toContent $ object ["redirect" .= renderUrl (InteractiveOverviewR i (TheoryProof l path))]
         Left _  -> getTheoryPathMR idx TheoryHelp
 
 getTheoryVerifyR idx _ = do getTheoryPathMR idx TheoryHelp
@@ -728,9 +728,9 @@ postTheoryEditR :: TheoryIdx -> TheoryPath -> Handler Html
 postTheoryEditR idx (TheoryDelete l) = do
     idx' <- deleteLemma idx l
     case idx' of
-        Right i -> redirect (OverviewR i TheoryHelp)
+        Right i -> redirect (InteractiveOverviewR i TheoryHelp)
         Left  e -> do setMessage $ toHtml e
-                      redirect (OverviewR idx (TheoryDelete l))
+                      redirect (InteractiveOverviewR idx (TheoryDelete l))
 
 
 postTheoryEditR idx path = do
@@ -745,7 +745,7 @@ postTheoryEditR idx path = do
     case idx' of
         Right i -> do
                     case mLemmaText of
-                        Just _ ->  redirect (OverviewR i path)
+                        Just _ ->  redirect (InteractiveOverviewR i path)
                         Nothing -> defaultLayout $ do
                             setTitle "Error"
                             [whamlet|<p>Failed to retrieve lemma-text from form data|]
@@ -768,10 +768,11 @@ getInteractiveOverviewR idx path = withTheory idx ( \ti -> do
   renderF <- getUrlRender
   renderParamsF <- getUrlRenderParams
   getParams <- reqGetParams <$> getRequest
+  lptxt <- getLemmaPlaintext idx path
   let graphOnlyMaybe = lookup "graph_only" getParams :: Maybe T.Text
   case graphOnlyMaybe of 
     Just graphOnly -> defaultLayout $ do 
-      setTitle (toHtml $ "Theory: " ++ get thyName (tiTheory ti))
+      setTitle (toHtml $ "Theory: " ++ ti.theory._thyName)
       toWidget
         [hamlet|
             <dot-graph-viz dotsrc="#{dotPath}" popup="true">
@@ -780,8 +781,8 @@ getInteractiveOverviewR idx path = withTheory idx ( \ti -> do
       dotPath = T.unpack $ renderF (TheoryInteractiveGraphR idx path)
     Nothing -> defaultLayout $ do
       let renderParamsF' route = renderParamsF route getParams
-      overview <- liftIO $ overviewTpl renderF renderParamsF' ti path
-      setTitle (toHtml $ "Theory: " ++ get thyName (tiTheory ti))
+      overview <- liftIO $ overviewTpl renderF renderParamsF' ti path lptxt
+      setTitle (toHtml $ "Theory: " ++ ti.theory._thyName)
       overview )
 
 
@@ -804,7 +805,7 @@ getInteractiveOverviewDiffR idx path = withDiffTheory idx ( \ti -> do
   let graphOnlyMaybe = lookup "graph_only" getParams :: Maybe T.Text
   case graphOnlyMaybe of 
     Just graphOnly -> defaultLayout $ do 
-      setTitle (toHtml $ "DiffTheory: " ++ get diffThyName (dtiTheory ti))
+      setTitle (toHtml $ "DiffTheory: " ++ ti.theory._diffThyName)
       toWidget
         [hamlet|
             <dot-graph-viz dotsrc="#{dotPath}" popup="true">
@@ -813,7 +814,7 @@ getInteractiveOverviewDiffR idx path = withDiffTheory idx ( \ti -> do
       dotPath = T.unpack $ renderF (TheoryInteractiveGraphDiffR idx path)
     Nothing -> defaultLayout $ do
       overview <- liftIO $ overviewDiffTpl renderF ti path
-      setTitle (toHtml $ "DiffTheory: " ++ get diffThyName (dtiTheory ti))
+      setTitle (toHtml $ "DiffTheory: " ++ ti.theory._diffThyName)
       overview )
 
 -- | Show source (pretty-printed open theory).
@@ -1235,7 +1236,7 @@ getTheoryGraphR idx path = withTheory idx $ \ti -> do
 getTheoryInteractiveGraphR:: TheoryIdx -> TheoryPath -> Handler T.Text
 getTheoryInteractiveGraphR idx path = withTheory idx ( \ti -> do
         (graphOptions, dotOptions) <- getOptions
-        case (dotGraphString (dotSystemCompact graphOptions dotOptions) (tiTheory ti) path) of 
+        case (dotGraphString (dotSystemCompact graphOptions dotOptions) ti.theory path) of 
           Just dotStr -> return (T.pack dotStr)
           Nothing     -> notFound
       )
@@ -1271,7 +1272,7 @@ getTheoryInteractiveGraphDiffR' idx path mirror = withDiffTheory idx ( \ti -> do
       (graphOptions, dotOptions) <- getOptions
       case interactiveDotDiffThyPath
           (dotSystemCompact graphOptions dotOptions)
-          (dtiTheory ti) path
+          ti.theory path
           (mirror) of
         Nothing -> notFound
         Just dotStr -> return (T.pack dotStr))
