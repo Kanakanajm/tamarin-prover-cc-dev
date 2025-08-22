@@ -1240,15 +1240,6 @@ getTheoryInteractiveGraphR idx path = withTheory idx ( \ti -> do
           Nothing     -> notFound
       )
 
--- | Get rendered interactive dot graph for theory and given path.
-getTheoryInteractiveGraphR:: TheoryIdx -> TheoryPath -> Handler T.Text
-getTheoryInteractiveGraphR idx path = withTheory idx ( \ti -> do
-        (graphOptions, dotOptions) <- getOptions
-        case (dotGraphString (dotSystemCompact graphOptions dotOptions) (tiTheory ti) path) of 
-          Just dotStr -> return (T.pack dotStr)
-          Nothing     -> notFound
-      )
-
 -- | Get rendered graph for theory and given path.
 getTheoryGraphDiffR :: TheoryIdx -> DiffTheoryPath -> Handler ()
 getTheoryGraphDiffR idx path = getTheoryGraphDiffR' idx path False
