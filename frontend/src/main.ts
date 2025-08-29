@@ -72,6 +72,34 @@ function constructGraphOnlyUrl(url: string): string {
   return url + (url.includes('?') ? '&' : '?') + 'graph_only';
 }
 
+function getSimplificationFromCookie(): number {
+  const k = "simplification=";
+  const s = document.cookie.indexOf(k);
+  // assume simpification level values from 0 to 9 (one digit)
+  return s === -1 ? -1 : Number(document.cookie.charAt(s + k.length));
+}
+
+function constructDotSrcParamsFromCookie(): string {
+  const param = new URLSearchParams();
+  if (document.cookie.indexOf("abbreviate=") === -1) {
+    param.append("unabbreviate", "");
+  }
+  if (document.cookie.indexOf("auto-sources=") === -1) {
+    param.append("no-auto-sources", "");
+  }
+  const smpl = getSimplificationFromCookie();
+
+  if (smpl !== -1) {
+    if (smpl === 0) {
+      param.append("uncompact", "");
+      param.append("uncompress", "");
+    }
+    param.append("simplification", smpl.toString());
+  }
+
+  return param.toString();
+}
+
 
 
 /** A dictionary where uses zoom level as key 
@@ -135,21 +163,32 @@ export class DotGraphViz extends HTMLElement {
 
   postMessage = (msg: BroadcastMessage) => this.channel.postMessage(msg);
 
-  attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null) {
-    if (name === "dotsrc" && newValue !== oldValue) {
-      this.dotSrc = newValue;
-      this.renderSource();
-      // Notice the popup window that dotsrc has changed
-      this.postMessage({ type: "response-dotsrc", payload: this.dotSrc });
-    }
-  }
+  // attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null) {
+  // if (name === "dotsrc" && newValue !== oldValue) {
+  //   this.dotSrc = newValue;
+  //   console.debug(`Dot src changed from ${oldValue} to ${newValue}`);
+  //   this.renderSource();
+  //   // Notice the popup window that dotsrc has changed
+  //   this.postMessage({ type: "response-dotsrc", payload: this.dotSrc });
+  // }
+  // }
 
   connectedCallback() {
     this.dotSrc = this.getAttribute("dotsrc");
+    this.dotSrc = this.dotSrc?.split("?").shift(); // element before ?
+    this.dotSrc = this.dotSrc?.concat("?").concat(constructDotSrcParamsFromCookie());
+
+
     this.isPopup = this.getAttribute("popup") === "true";
     this.canPopup = !this.isPopup && this.getAttribute("canpop") === "true";
 
     this.setupMessageHandler();
+
+    // notify opened popup if dotsrc changed due to reload
+    if (!this.isPopup && this.isPopupOpen()) {
+      this.postMessage({ type: "host-dotsrc-changed", payload: this.dotSrc })
+    }
+
     this.renderSource();
   }
 
@@ -179,14 +218,11 @@ export class DotGraphViz extends HTMLElement {
 
       this.channel.onmessage = (event: MessageEvent<BroadcastMessage>) => {
         switch (event.data.type) {
-          case "ping":
-            // Respond to host pings with pongs
-            this.postMessage({ type: "pong" });
-            break;
           case "close-popup":
             window.close();
             break;
-          case "response-dotsrc":
+          case "host-dotsrc-changed":
+            console.debug("Host sent a new dot src: " + event.data.payload)
             if (this.dotSrc !== event.data.payload) {
               this.dotSrc = event.data.payload;
               this.renderSource();
@@ -226,17 +262,17 @@ export class DotGraphViz extends HTMLElement {
    */
   render = (dotString: string) => {
     instance().then(viz => {
-      
+
       /* Resetting all the components */
       this.innerHTML = "";
       this.svg = undefined;
       this.svgg = null;
-       this.highlightConnections = { nodes: [], edges: [] };
+      this.highlightConnections = { nodes: [], edges: [] };
       this.minimizableObjects = {
         edges: {},
         nodes: {}
       };
-     
+
       if (!this.isPopup && this.isPopupOpen()) {
         const closePopupBtn = document.createElement("button");
         closePopupBtn.textContent = "Pop-in";

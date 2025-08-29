@@ -3,4 +3,4 @@ export type BroadcastMessage = {
     payload?: string | null
 }
 
-export type BroadcastMessageType = "ping" | "pong" | "close-popup" | "popup-closed" | "response-dotsrc" 
+export type BroadcastMessageType = "close-popup" | "popup-closed" | "host-dotsrc-changed" 
