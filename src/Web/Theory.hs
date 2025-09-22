@@ -34,6 +34,7 @@ module Web.Theory
   , applyDiffProverAtPath
   , applyProverAtPathDiff
   , dotGraphString
+  , graphJsonThyPath
   )
 where
 
@@ -69,6 +70,8 @@ import TheoryObject (theoryMacros, prettyTactic, diffTheoryMacros, DiffLemma (..
 
 import Web.Settings
 import Web.Types
+import           Web.Utils
+import qualified Control.Monad.State.Lazy     as State
 
 ------------------------------------------------------------------------------
 -- Various other functions
@@ -1277,6 +1280,42 @@ htmlThyDbgPath thy path = go path
       prettySystem <$> psInfo (root proof)
     go _ = Nothing
 -}
+-- | Send the constraint system and the legend as JSON
+graphJsonThyPath :: FilePath       -- ^ Tamarin's cache directory
+                 -> (String -> System -> String)
+                                   -- ^ Function to convert constraint system to JSON
+                 -> Bool           -- ^ True iff we want abbreviation
+                 -> ClosedTheory
+                 -> TheoryPath
+                 -> IO FilePath
+graphJsonThyPath cacheDir_ showJsonGraphFunct abbreviate thy path = go path
+  where
+    go (TheorySource k i j) = renderJson $ casesCode k i j
+    go (TheoryProof l p)    = renderJson $ proofPathCode l p
+    go _                    = error "Unhandled theory path. This is a bug."
+
+    casesCode :: SourceKind -> Int -> Int -> String
+    casesCode k i j =
+      showJsonGraphFunct ("Theory: " ++ thy._thyName ++ " Case: " ++ show i ++ ":" ++ show j) (snd $ cases !! (i-1) !! (j-1))
+      where
+        cases = map (getDisj . (._cdCases)) (getSource k thy)
+
+    proofPathCode :: String -> ProofPath -> String
+    proofPathCode lemma proofPath   =
+      fromMaybe ("") $ do
+        subProof <- resolveProofPath thy lemma proofPath
+        sequent <- psInfo $ root subProof
+        let (sys, legend) = State.evalState (Web.Utils.abbrev abbreviate 30 sequent) M.empty
+            jsonGraph = showJsonGraphFunct ("Theory: " ++ thy._thyName ++ " Lemma: " ++ lemma) sys
+        return jsonGraph
+
+    renderJson :: String -> IO FilePath
+    renderJson str = do
+      let graphPath = cacheDir_ </> getGraphPath OutJSON str
+          jsonPath = addExtension graphPath ("json")
+      createDirectoryIfMissing True (takeDirectory jsonPath)
+      writeFile jsonPath str
+      return jsonPath
 
 -- | Output either JSON or an image corresponding to the given theory path and return the generated file's path.
 -- Returns Nothing if there was an error during the image generation.

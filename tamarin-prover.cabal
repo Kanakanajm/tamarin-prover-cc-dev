@@ -182,6 +182,7 @@ executable tamarin-prover
       Web.Settings
       Web.Theory
       Web.Types
+      Web.Utils
 
       Test.ParserTests
 

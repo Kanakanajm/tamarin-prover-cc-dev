@@ -28,6 +28,7 @@ module Web.Handler
   , getTheoryPathDiffMR
   -- , getTheoryPathDR
   , getTheoryGraphR
+  , getTheoryGraphJsonR
   , getTheoryInteractiveGraphR
   , getTheoryGraphDiffR
   , getTheoryMirrorDiffR
@@ -1231,6 +1232,18 @@ getTheoryGraphR idx path = withTheory idx $ \ti -> do
   case img' of
     Nothing -> notFound
     Just img -> sendFile (fromString . imageFormatMIME $ yesod.imageFormat) img
+
+-- | Get the graph as JSON for theory and given path.
+getTheoryGraphJsonR :: TheoryIdx -> TheoryPath -> Handler ()
+getTheoryGraphJsonR idx path = withTheory idx (\ti -> do
+    yesod <- getYesod
+    (graphOptions, dotOptions) <- getOptions
+    -- abbreviate is False iff "abbreviate-in-backend" is not set
+    abbreviate <- isJust <$> lookupGetParam "abbrevInBackend"
+    jsonStr <- liftIO $ traceExceptions "getTheoryGraphJsonR" $
+        graphJsonThyPath (yesod.cacheDir) (\label system -> sequentsToJSONPretty graphOptions [(label, system)]) abbreviate (ti.theory) path
+
+    sendFile (fromString ".json") jsonStr)
 
 -- | Get rendered interactive dot graph for theory and given path.
 getTheoryInteractiveGraphR:: TheoryIdx -> TheoryPath -> Handler T.Text
