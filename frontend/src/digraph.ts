@@ -35,6 +35,44 @@ function composeEdgeTitle(edge: DiEdge, nodes: NodeDict) {
     return `${nodes[edge.from].title}${edge.fromPort ? `:${edge.fromPort}` : ""}->${nodes[edge.to].title}${edge.toPort ? `:${edge.toPort}` : ""}`;
 }
 
+
+interface JgnNode {
+    jgnConst?: string; 
+    jgnFunct?: string; 
+    jgnParams?: JgnNode[]; 
+    jgnShow?: string; 
+}
+
+interface Abbrev {
+    jgaAbbrev: {
+        jgnConst: string; 
+    };
+    jgaExpansion: JgnNode; 
+    jgaTerm: JgnNode; 
+}
+
+
+interface Graph {
+    jgAbbrevs: Abbrev[];
+}
+
+interface JsonGraph {
+    graphs: Graph[];
+}
+
+let jsonGraphSrc: JsonGraph | undefined;
+export class JsonDiGraph {
+
+    jsonString: JsonGraph;
+    constructor(json: JsonGraph) {
+        this.jsonString = json;
+        jsonGraphSrc = json;
+        //have to push the data recv to jsonString and 
+        // console.debug("inside constructor: jsonString: " , this.jsonString);
+        console.debug("inside constructor: jsonGraphSrc: ", jsonGraphSrc);
+    }
+}
+
 export class DiGraph {
 
     nodes: NodeDict;
@@ -57,7 +95,8 @@ export class DiGraph {
         }
 
     //extract abbreviations
-    constructor(vizGraph: VizGraph, svg: SVGSVGElement) {
+    constructor(vizGraph: VizGraph, svg: SVGSVGElement, jsonGraphSrc?: JsonGraph) {
+        debugger;
         const abbrevObj = (vizGraph.objects ?? []).find(n => n.shape === "plain");
         if (abbrevObj) {
             // find abbreviation table's element id
@@ -89,6 +128,16 @@ export class DiGraph {
                     title: cur.name,
                     minimizable: cur.shape === "record"
                 }
+                Object.keys(this.abbrev.abbreviations).forEach(k => {
+
+                    // console.log("jsonGraphSrc.graphs[0] =", jsonGraphSrc?.graphs[0]);
+                    jsonGraphSrc?.graphs[0].jgAbbrevs.forEach(abb => {
+                        if (abb.jgaExpansion.jgnShow?.includes(k)) {
+                            this.abbrev.abbreviations[abb.jgaAbbrev.jgnConst].push(...this.abbrev.abbreviations[k]);
+                        }
+                    })
+                });
+
                 return acc
             }, {} as NodeDict
         );
@@ -184,3 +233,5 @@ export class DiGraph {
         return connections;
     }
 }
+
+

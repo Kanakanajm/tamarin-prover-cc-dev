@@ -6,6 +6,7 @@ import { VizGraph } from "./viz";
 import { DiGraph, DiGraphConnections } from "./digraph";
 import './style.css';
 import { BroadcastMessage } from "./message";
+import { JsonDiGraph } from "./digraph";
 
 const ZOOM_LEVEL_THRESHOLD = 0.99;
 const ARROW_HEAD_WIDTH = 7;
@@ -107,7 +108,7 @@ function constructDotSrcParamsFromCookie(): string {
 type MinimizableObject = { [key in ZoomLevel]: SVGGElement | null };
 
 export class DotGraphViz extends HTMLElement {
-  static observedAttributes = ['dotsrc', 'popup', 'canpop'];
+  static observedAttributes = ['dotsrc', 'popup', 'canpop',];
 
   isPopup: boolean = false;
   canPopup: boolean = false;
@@ -124,8 +125,11 @@ export class DotGraphViz extends HTMLElement {
    * - A location that serves the dot file during production */
   dotSrc?: string | null;
 
+  jsonSrc?: string | null;
+
   json?: VizGraph;
   graph?: DiGraph;
+  jsonGraph?: JsonDiGraph;
   /** Root <svg> element */
   svg?: SVGSVGElement;
   /** The direct descendant <g> element of <svg> element, container of the whole graph*/
@@ -174,9 +178,20 @@ export class DotGraphViz extends HTMLElement {
   // }
 
   connectedCallback() {
+    debugger;
     this.dotSrc = this.getAttribute("dotsrc");
+
+    if(this.dotSrc?.includes('interactive-graph'))
+    {
+      this.jsonSrc = this.dotSrc.replace('interactive-graph', 'json');
+    }
+    
+
     this.dotSrc = this.dotSrc?.split("?").shift(); // element before ?
     this.dotSrc = this.dotSrc?.concat("?").concat(constructDotSrcParamsFromCookie());
+
+    this.jsonSrc = this.jsonSrc?.split("?").shift(); // element before ?
+    this.jsonSrc = this.jsonSrc?.concat("?").concat(constructDotSrcParamsFromCookie());
 
 
     this.isPopup = this.getAttribute("popup") === "true";
@@ -234,35 +249,90 @@ export class DotGraphViz extends HTMLElement {
     }
   }
 
-  renderSource = () => {
+  renderSource = async () => {
+    debugger;
     if (!this.dotSrc || !this.dotSrc.trim().length) {
       console.error("No dot graph source url provided.");
       return;
     }
+    if(!this.jsonSrc || !this.jsonSrc.trim().length) {
+      console.error("No json graph source url provided.");
+      return;
+    }
     // Cancel previous fetch event.
     this.cancelFetch();
+    // this.fetchJsonString(this.jsonSrc)
+    //       .then((d) => {
+    //         console.log("fetched json string");
+    //         this.renderJson(d);
+    //       }).catch(err => {
+    //         if (err === FETCH_CANCELED) {
+    //           // Output as trace only when fetch is rejected due to canceling.
+    //           console.debug(FETCH_CANCELED);
+    //         } else {
+    //           // Other rejects.
+    //           console.error(err);
+    //         }
+    //       });
+    // this.fetchDotString(this.dotSrc)
+    //   .then((d) => {
+    //     this.render(d);
+    //   }).catch(err => {
+    //     if (err === FETCH_CANCELED) {
+    //       // Output as trace only when fetch is rejected due to canceling.
+    //       console.debug(FETCH_CANCELED);
+    //     } else {
+    //       // Other rejects.
+    //       console.error(err);
+    //     }
+    //   });
+    try {
+    // Fetch and render JSON first
+    const jsonData = await this.fetchJsonString(this.jsonSrc);
+    console.log("fetched json string");
+    this.renderJson(jsonData);
 
-    this.fetchDotString(this.dotSrc)
-      .then((d) => {
-        this.render(d);
-      }).catch(err => {
-        if (err === FETCH_CANCELED) {
-          // Output as trace only when fetch is rejected due to canceling.
-          console.debug(FETCH_CANCELED);
-        } else {
-          // Other rejects.
-          console.error(err);
-        }
-      });
+    // Now fetch and render DOT
+    const dotData = await this.fetchDotString(this.dotSrc);
+    this.render(dotData);
+
+  } catch (err) {
+    if (err === FETCH_CANCELED) {
+      console.debug(FETCH_CANCELED);
+    } else {
+      console.error(err);
+    }
   }
 
+      
+  }
+
+  renderJson = (jsonString: any) => {
+    // instance().then(vi z => {
+      debugger;
+      console.debug("Received Json string");
+        console.debug(jsonString);
+        this.jsonGraph = new JsonDiGraph(jsonString);
+
+        console.debug("jsonGraph: " , this.jsonGraph);
+        // this.svg = viz.renderSVGElement(jsonString);
+        //   this.json = viz.renderJSON(jsonString) as VizGraph;
+        //   this.graph = new DiGraph(this.json, this.svg);
+
+        //   // debug infos
+        //   console.log("Received Json string");
+        //   console.log(this.svg);
+        //   console.log(this.json);
+        //   console.log(this.graph);
+    // });
+  }
   /** Render the graph as SVG given dot graph definition
    * 
    * @param dotString The dot graph definition (usually saved as a `*.dot` file and start with "digraph" in our case)
    */
   render = (dotString: string) => {
     instance().then(viz => {
-
+      debugger;
       /* Resetting all the components */
       this.innerHTML = "";
       this.svg = undefined;
@@ -286,12 +356,13 @@ export class DotGraphViz extends HTMLElement {
 
       this.svg = viz.renderSVGElement(dotString);
       this.json = viz.renderJSON(dotString) as VizGraph;
-      this.graph = new DiGraph(this.json, this.svg);
+      console.debug('this.jsonGraph?.jsonString= ',this.jsonGraph);
+      this.graph = new DiGraph(this.json, this.svg, this.jsonGraph?.jsonString);
 
       // debug infos
-      console.debug("Received dot string");
+      console.debug("Received dot string:");
       console.debug(dotString);
-      console.debug(this.svg);
+      // console.debug(this.svg);
       console.debug(this.json);
       console.debug(this.graph);
 
@@ -447,6 +518,26 @@ export class DotGraphViz extends HTMLElement {
 
     return promise;
   };
+  fetchJsonString = (url: string): Promise<any> => {
+  debugger;
+  const { promise, resolve, reject } = Promise.withResolvers<any>();
+
+    this.cancelFetch = () => {
+      reject(FETCH_CANCELED);
+    }
+    fetch(url).then((res) => {
+      if (!res.ok) {
+        reject("Failed to fetch json graph definition.");
+        return;
+      }
+      return res.json();
+    })
+    .then((json)=>{
+      resolve(json);
+    })
+    .catch(err => reject(err));
+    return promise;
+  }
 
   constructMinimizableObjects = () => {
     if (!this.graph || !this.svgg)
@@ -701,11 +792,17 @@ export class DotGraphViz extends HTMLElement {
     When an abbreviation is clicked in the table, all graph nodes containing that abbreviation are highlighted. 
   */
   handleAbbreviationTextClick = (event: MouseEvent) => {
-
+  debugger;
     if (!this.graph)
       return;
     const el = event.target as HTMLElement;
     const abbrev = el.textContent ?? "";
+    console.debug(
+      "this.graph.abbrev: " + this.graph.abbrev +
+      "\nthis.graph.abbrev.abbreviations[abbrev]: " + this.graph.abbrev.abbreviations[abbrev] +
+      "\nthis.graph.abbrev.abbreviations: " + this.graph.abbrev.abbreviations +
+      "\ntabbrev: " + abbrev
+    )
     this.highlightConnections = {
       nodes: this.graph.abbrev.abbreviations[abbrev],
       edges: []
