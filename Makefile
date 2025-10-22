@@ -44,8 +44,10 @@ clean:	tamarin-clean
 .PHONY: frontend
 frontend:
 	cd frontend && npm install && npm run build
-	cp frontend/dist/assets/index.js data/js/interactive-dot.js
-	cp frontend/dist/assets/index.css data/css/interactive-dot.css
+	cp frontend/dist/intdot-graph.es.js data/js/
+	cp frontend/dist/intdot-staticgraph.es.js data/js/
+	cp frontend/dist/intdot-dynamicgraph.es.js data/js/
+	cp frontend/dist/intdot-style.css data/css/
 
 # ###########################################################################
 # NOTE the remainder makefile is FOR DEVELOPERS ONLY.

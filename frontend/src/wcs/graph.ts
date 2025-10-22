@@ -1,11 +1,10 @@
 import { instance } from "@viz-js/viz";
 import { select, selectAll, zoom, create, D3ZoomEvent } from "d3";
-import { extendCurvePath, getCubicBezierCurve, getCubicBezierCurveGradients } from "./path";
-import { calculateCentroid, cross, direction, dot, Ellipse, intersect, inv, print2f, project, Ray, sub, traverse, Vec2 } from "./math";
-import { VizGraph } from "./viz";
-import { DiGraph, DiGraphConnections } from "./digraph";
-import './style.css';
-import { BroadcastMessage } from "./message";
+import { extendCurvePath, getCubicBezierCurve, getCubicBezierCurveGradients } from "../path";
+import { calculateCentroid, cross, direction, dot, Ellipse, intersect, inv, print2f, project, Ray, sub, traverse, Vec2 } from "../math";
+import { VizGraph } from "../viz";
+import { DiGraph, DiGraphConnections } from "../digraph";
+import './graph.css';
 
 const ZOOM_LEVEL_THRESHOLD = 0.99;
 const ARROW_HEAD_WIDTH = 7;
@@ -13,10 +12,6 @@ const ARROW_HEAD_HEIGHT = 10;
 const ARROW_HEAD_HALF_WIDTH = ARROW_HEAD_WIDTH / 2;
 const ABBREVIATION_TABLE_SCALE = 1.5;
 const MAX_FONT = 30;
-
-const LS_ISPOPUPOPEN = "popup_open";
-
-const FETCH_CANCELED = "Fetch Canceled";
 
 type ZoomLevel = "ZoomIn" | "ZoomOut";
 
@@ -68,10 +63,6 @@ function getTitleText(g: SVGGElement): string {
   return select<SVGGElement, unknown>(g).selectChild<SVGTitleElement>("title").text();
 }
 
-function constructGraphOnlyUrl(url: string): string {
-  return url + (url.includes('?') ? '&' : '?') + 'graph_only';
-}
-
 function getSimplificationFromCookie(): number {
   const k = "simplification=";
   const s = document.cookie.indexOf(k);
@@ -107,15 +98,6 @@ function constructDotSrcParamsFromCookie(): string {
 type MinimizableObject = { [key in ZoomLevel]: SVGGElement | null };
 
 export class DotGraphViz extends HTMLElement {
-  static observedAttributes = ['dotsrc', 'popup', 'canpop'];
-
-  isPopup: boolean = false;
-  canPopup: boolean = false;
-
-  isPopupOpen = () => localStorage.getItem(LS_ISPOPUPOPEN) === 'true';
-
-  /** The broadcast channel which the component subscribed on  */
-  channel: BroadcastChannel;
 
   /** The source URL of the dot graph definition 
    * 
@@ -123,6 +105,9 @@ export class DotGraphViz extends HTMLElement {
    * - A path to the dot file in the public folder during development
    * - A location that serves the dot file during production */
   dotSrc?: string | null;
+
+  dotSrcParams?: string;
+  checkDotSrcParamChangeInterval?: number;
 
   json?: VizGraph;
   graph?: DiGraph;
@@ -148,20 +133,10 @@ export class DotGraphViz extends HTMLElement {
     edges: []
   }
 
-  /** Cancel previous fetch event
-   * 
-   * In case other fetch events are spawned by other renderSource(), 
-   * to make sure that renders are also done in the order that they are called (although they are asynchronous),
-   * we expose cancelFetch() to enable newer renderSource() to cancel the older ones before they are finished.
-   */
-  cancelFetch: () => void = () => { };
 
   constructor() {
     super();
-    this.channel = new BroadcastChannel("dot-graph-viz-popup");
   }
-
-  postMessage = (msg: BroadcastMessage) => this.channel.postMessage(msg);
 
   // attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null) {
   // if (name === "dotsrc" && newValue !== oldValue) {
@@ -176,84 +151,19 @@ export class DotGraphViz extends HTMLElement {
   connectedCallback() {
     this.dotSrc = this.getAttribute("dotsrc");
     this.dotSrc = this.dotSrc?.split("?").shift(); // element before ?
-    this.dotSrc = this.dotSrc?.concat("?").concat(constructDotSrcParamsFromCookie());
-
-
-    this.isPopup = this.getAttribute("popup") === "true";
-    this.canPopup = !this.isPopup && this.getAttribute("canpop") === "true";
-
-    this.setupMessageHandler();
-
-    // notify opened popup if dotsrc changed due to reload
-    if (!this.isPopup && this.isPopupOpen()) {
-      this.postMessage({ type: "host-dotsrc-changed", payload: this.dotSrc })
-    }
-
-    this.renderSource();
-  }
-
-  setupMessageHandler = () => {
-    // if component is used in a normal page (theory overview)
-    if (!this.isPopup) {
-      this.channel.onmessage = (event: MessageEvent<BroadcastMessage>) => {
-        switch (event.data.type) {
-          case "popup-closed":
-            // When popup is closed, refresh page.
-            window.location.reload();
-            break;
-        }
-      };
-    }
-    else {
-      // If component is a popup, add popup css class.
-      this.classList.add("popup");
-
-
-      window.addEventListener("beforeunload", () => {
-        // Notice host when a popup window is closed.
-        localStorage.setItem('popup_open', 'false');
-        this.postMessage({ type: "popup-closed" });
-      });
-
-
-      this.channel.onmessage = (event: MessageEvent<BroadcastMessage>) => {
-        switch (event.data.type) {
-          case "close-popup":
-            window.close();
-            break;
-          case "host-dotsrc-changed":
-            console.debug("Host sent a new dot src: " + event.data.payload)
-            if (this.dotSrc !== event.data.payload) {
-              this.dotSrc = event.data.payload;
-              this.renderSource();
-            }
-            break;
-        }
-      };
-
-    }
-  }
-
-  renderSource = () => {
+    this.dotSrcParams = constructDotSrcParamsFromCookie();
+    this.dotSrc = this.dotSrc?.concat("?").concat(this.dotSrcParams);
     if (!this.dotSrc || !this.dotSrc.trim().length) {
-      console.error("No dot graph source url provided.");
+      console.error("[dot-graph-viz]: No dot graph source url provided.");
       return;
     }
-    // Cancel previous fetch event.
-    this.cancelFetch();
 
     this.fetchDotString(this.dotSrc)
       .then((d) => {
         this.render(d);
       }).catch(err => {
-        if (err === FETCH_CANCELED) {
-          // Output as trace only when fetch is rejected due to canceling.
-          console.debug(FETCH_CANCELED);
-        } else {
-          // Other rejects.
-          console.error(err);
-        }
-      });
+          console.error("[dot-graph-viz]: Error occurs during fetch\n", err);
+    });
   }
 
   /** Render the graph as SVG given dot graph definition
@@ -261,8 +171,10 @@ export class DotGraphViz extends HTMLElement {
    * @param dotString The dot graph definition (usually saved as a `*.dot` file and start with "digraph" in our case)
    */
   render = (dotString: string) => {
+    if (this.checkDotSrcParamChangeInterval !== undefined) {
+      clearInterval(this.checkDotSrcParamChangeInterval);
+    }
     instance().then(viz => {
-
       /* Resetting all the components */
       this.innerHTML = "";
       this.svg = undefined;
@@ -273,41 +185,12 @@ export class DotGraphViz extends HTMLElement {
         nodes: {}
       };
 
-      if (!this.isPopup && this.isPopupOpen()) {
-        const closePopupBtn = document.createElement("button");
-        closePopupBtn.textContent = "Pop-in";
-        closePopupBtn.id = "close-popup-btn";
-        closePopupBtn.addEventListener("click", () => {
-          this.channel.postMessage({ type: "close-popup" });
-        });
-        this.appendChild(closePopupBtn);
-        return;
-      }
-
       this.svg = viz.renderSVGElement(dotString);
       this.json = viz.renderJSON(dotString) as VizGraph;
       this.graph = new DiGraph(this.json, this.svg);
 
-      // debug infos
-      console.debug("Received dot string");
-      console.debug(dotString);
-      console.debug(this.svg);
-      console.debug(this.json);
-      console.debug(this.graph);
-
       // attach SVG to DOM
       this.append(this.svg);
-
-      console.log(this.canPopup);
-
-      if (this.canPopup) {
-        // Show pop-out (open popup) button.
-        const popupBtn = document.createElement("button");
-        popupBtn.textContent = "Pop-out";
-        popupBtn.id = "popup-btn";
-        popupBtn.addEventListener("click", this.handlePopupClick);
-        this.appendChild(popupBtn);
-      }
 
       // Allow selecting/copying text elements with the mouse 
       selectAll("text")
@@ -391,44 +274,36 @@ export class DotGraphViz extends HTMLElement {
         this.svg.appendChild(abbrevTblEl);
       }
 
+      this.checkDotSrcParamChangeInterval = setInterval(() => {
+        const params = constructDotSrcParamsFromCookie();
+        if (params !== this.dotSrcParams) {
+          this.dotSrc = this.getAttribute("dotsrc");
+          this.dotSrc = this.dotSrc?.split("?").shift(); // element before ?
+          this.dotSrcParams = params;
+          this.dotSrc = this.dotSrc?.concat("?").concat(this.dotSrcParams);
+          if (!this.dotSrc || !this.dotSrc.trim().length) {
+            console.error("[dot-graph-viz]: No dot graph source url provided.");
+            return;
+          }
+        
+          this.fetchDotString(this.dotSrc)
+            .then((d) => {
+              this.render(d);
+            }).catch(err => {
+                console.error("[dot-graph-viz]: Error occurs during fetch\n", err);
+          });
+          }
+        }, 1000);
+
     });
-  }
+  } 
 
-  handlePopupOpenContentChange = () => {
-    this.innerHTML = "";
-
-    // close popup button
-    const closePopupBtn = document.createElement("button");
-    closePopupBtn.textContent = "Pop-in";
-    closePopupBtn.id = "close-popup-btn";
-    closePopupBtn.addEventListener("click", () => {
-      this.channel.postMessage({ type: "close-popup" });
-    });
-    this.appendChild(closePopupBtn);
-  }
-
-  handlePopupClick = () => {
-    const popup = window.open(constructGraphOnlyUrl(window.location.href), undefined, "popup=true");
-    if (popup) {
-      // after popup open successfully,
-      // remove all children (the whole graph)
-      localStorage.setItem(LS_ISPOPUPOPEN, "true");
-      this.renderSource();
-
-    } else {
-      console.error("Failed to open popup!");
-    }
-  }
 
   /*
     Fetchs the dot graph string  
   */
   fetchDotString = (url: string): Promise<string> => {
     const { promise, resolve, reject } = Promise.withResolvers<string>();
-
-    this.cancelFetch = () => {
-      reject(FETCH_CANCELED);
-    }
 
     fetch(url).then((res) => {
       if (!res.ok) {

@@ -50,6 +50,7 @@ module Web.Types
   , imageFormatMIME
   , OutputFormat(..)
   , OutputCommand(..)
+  , intdotLayout
   )
 where
 
@@ -572,12 +573,13 @@ mkYesodData "WebUI" [parseRoutes|
 /thy/trace/#Int/edit/*TheoryPath           TheoryEditR             POST
 /thy/trace/#Int/verify/*TheoryPath         TheoryVerifyR           GET
 /thy/trace/#Int/overview/*TheoryPath          InteractiveOverviewR               GET
+/thy/trace/#Int/intdot/*TheoryPath             InteractiveDotGraphR            GET
 /thy/trace/#Int/source                           TheorySourceR           GET
 /thy/trace/#Int/message                          TheoryMessageDeductionR GET
 /thy/trace/#Int/main/*TheoryPath              TheoryPathMR            GET
 -- /thy/trace/#Int/debug/*TheoryPath             TheoryPathDR            GET
 /thy/trace/#Int/graph/*TheoryPath             TheoryGraphR            GET
-/thy/trace/#Int/interactive-graph/*TheoryPath             TheoryInteractiveGraphR            GET
+/thy/trace/#Int/interactive-graph-def/*TheoryPath             TheoryInteractiveGraphR            GET
 /thy/trace/#Int/autoprove/#SolutionExtractor/#Int/#Bool/*TheoryPath AutoProverR             GET
 /thy/trace/#Int/autoproveAll/#SolutionExtractor/#Int/*TheoryPath AutoProverAllR             GET
 /thy/trace/#Int/next/#String/*TheoryPath      NextTheoryPathR         GET
@@ -596,8 +598,10 @@ mkYesodData "WebUI" [parseRoutes|
 -- /thy/equiv/#Int/debug/*DiffTheoryPath             TheoryPathDiffDR            GET
 /thy/equiv/#Int/graph/*DiffTheoryPath         TheoryGraphDiffR            GET
 /thy/equiv/#Int/mirror/*DiffTheoryPath        TheoryMirrorDiffR            GET
-/thy/equiv/#Int/interactive-graph/*DiffTheoryPath         TheoryInteractiveGraphDiffR            GET
-/thy/equiv/#Int/interactive-mirror/*DiffTheoryPath        TheoryInteractiveMirrorDiffR            GET
+/thy/equiv/#Int/interactive-graph-def/*DiffTheoryPath         TheoryInteractiveGraphDiffR            GET
+/thy/equiv/#Int/interactive-mirror-def/*DiffTheoryPath        TheoryInteractiveMirrorDiffR            GET
+/thy/equiv/#Int/intdot/mirror/*DiffTheoryPath             InteractiveDotGraphMirrorDiffR            GET
+/thy/equiv/#Int/intdot/graph/*DiffTheoryPath             InteractiveDotGraphDiffR            GET
 /thy/equiv/#Int/autoprove/#SolutionExtractor/#Int/#Side/*DiffTheoryPath AutoProverDiffR             GET
 /thy/equiv/#Int/autoproveAll/#SolutionExtractor/#Int AutoProverAllDiffR             GET
 /thy/equiv/#Int/autoproveDiff/#SolutionExtractor/#Int/*DiffTheoryPath AutoDiffProverR             GET
@@ -657,6 +661,7 @@ instance Yesod WebUI where
   makeSessionBackend _ = return Nothing
 
   -- | The default layout for rendering.
+  defaultLayout :: WidgetFor WebUI () -> HandlerFor WebUI Html
   defaultLayout = defaultLayout'
 
   -- | The path cleaning function. We make sure empty strings
@@ -684,7 +689,7 @@ defaultLayout' w = do
     <html>
       <head>
         <title>#{pageTitle page}
-        <link rel=stylesheet href=/static/css/interactive-dot.css>
+        <link rel=stylesheet href=/static/css/intdot-style.css>
         <link rel=stylesheet href=/static/css/tamarin-prover-ui.css>
         <link rel=stylesheet href=/static/css/jquery-contextmenu.css>
         <link rel=stylesheet href=/static/css/smoothness/jquery-ui.css>
@@ -695,7 +700,9 @@ defaultLayout' w = do
         <script src=/static/js/jquery-superfish.js></script>
         <script src=/static/js/jquery-contextmenu.js></script>
         <script src=/static/js/tamarin-prover-ui.js></script>
-        <script type="module" src=/static/js/interactive-dot.js></script>
+        <script type="module" src=/static/js/intdot-graph.es.js></script>
+        <script type="module" src=/static/js/intdot-staticgraph.es.js></script>
+        <script type="module" src=/static/js/intdot-dynamicgraph.es.js></script>
         ^{pageHead page}
       <body>
         $maybe msg <- message
@@ -711,3 +718,22 @@ defaultLayout' w = do
   |]
           -- <li.delstep>
             -- <a href="#del/path">Remove step</a>
+
+intdotLayout :: Widget -> Handler Html
+intdotLayout w = do
+  page <- widgetToPageContent w
+  withUrlRenderer [hamlet|
+    $newline never
+    !!!
+    <html>
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>#{pageTitle page}
+        <style> body,html{width: 100%; height: 100%; overflow: hidden; margin: 0; padding: 0; }
+        <link rel=stylesheet href=/static/css/intdot-style.css>
+        <script type="module" src=/static/js/intdot-graph.es.js></script>
+        ^{pageHead page}
+      <body>
+        ^{pageBody page}
+  |]

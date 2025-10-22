@@ -161,11 +161,17 @@ refDotPath renderUrl tidx path = closedTag "img" [("class", "graph"), ("src", im
     imgPath = T.unpack $ renderUrl (TheoryGraphR tidx path)
     jsOpenSrcInNewTab = "window.open(this.src, '_blank')"
 
--- | Reference an interactive dot graph for the given path.
-refDotInteractivePath :: HtmlDocument d => RenderUrl -> TheoryIdx -> TheoryPath -> Bool -> d
-refDotInteractivePath renderUrl tidx path canPopup = withTag "dot-graph-viz" [("dotsrc", dotPath), ("canpop", if canPopup then "true" else "false")] (text "")
+-- | Reference an interactive dot graph with static popup for the given path.
+refDotInteractiveStaticPath :: HtmlDocument d => RenderUrl -> TheoryIdx -> TheoryPath -> d
+refDotInteractiveStaticPath renderUrl tidx path = withTag "static-graph" [("graphSrc", srcPath)] (text "")
   where
-    dotPath = T.unpack $ renderUrl (TheoryInteractiveGraphR tidx path)
+    srcPath = T.unpack $ renderUrl (InteractiveDotGraphR tidx path)
+
+-- | Reference an interactive dot graph for the given path.
+refDotInteractiveDynamicPath :: HtmlDocument d => RenderUrl -> TheoryIdx -> TheoryPath -> d
+refDotInteractiveDynamicPath renderUrl tidx path = withTag "dynamic-graph" [("graphSrc", srcPath)] (text "")
+  where
+    srcPath = T.unpack $ renderUrl (InteractiveDotGraphR tidx path)
 
 -- | Reference a dot graph for the given diff path.
 refDotDiffPath :: HtmlDocument d => RenderUrl -> TheoryIdx -> DiffTheoryPath -> Bool -> d
@@ -176,12 +182,12 @@ refDotDiffPath renderUrl tidx path mirror = withTag "a" [("href", imgPath), ("ta
               else T.unpack $ renderUrl (TheoryGraphDiffR tidx path)
     
 -- | Reference an interactive dot graph for the given diff path.
-refDotInteractiveDiffPath :: HtmlDocument d => RenderUrl -> TheoryIdx -> DiffTheoryPath -> Bool -> Bool -> d
-refDotInteractiveDiffPath renderUrl tidx path mirror canPopup= withTag "dot-graph-viz" [("dotsrc", dotPath), ("canpop", if canPopup then "true" else "false")] (text "")
+refDotInteractiveDiffPath :: HtmlDocument d => RenderUrl -> TheoryIdx -> DiffTheoryPath -> Bool -> d
+refDotInteractiveDiffPath renderUrl tidx path mirror= withTag "static-graph" [("graphSrc", srcPath)] (text "")
   where
-    dotPath = if mirror
-              then T.unpack $ renderUrl (TheoryInteractiveMirrorDiffR tidx path)
-              else T.unpack $ renderUrl (TheoryInteractiveGraphDiffR tidx path)
+    srcPath = if mirror
+              then T.unpack $ renderUrl (InteractiveDotGraphMirrorDiffR tidx path)
+              else T.unpack $ renderUrl (InteractiveDotGraphDiffR tidx path)
 
 -- | Generate the dot file path for an intermediate dot output.
 getDotPath :: String -> FilePath
@@ -520,7 +526,7 @@ subProofSnippet renderUrl renderImgUrl tidx ti lemma proofPath ctxt prf =
         [ text ""
         , withTag "h3" [] (text "Constraint system")
         ] ++
-        [ refDotInteractivePath renderImgUrl tidx (TheoryProof lemma proofPath) True
+        [ refDotInteractiveDynamicPath renderImgUrl tidx (TheoryProof lemma proofPath)
         | nonEmptyGraph se ]
         ++
         [ preformatted (Just "sequent") (prettyNonGraphSystem se)
@@ -597,7 +603,7 @@ subProofSnippet renderUrl renderImgUrl tidx ti lemma proofPath ctxt prf =
     refSubCase (name, prf') =
         [ withTag "h4" [] (text "Case" <-> text name)
         , maybe (text "no proof state available")
-                (const $ (refDotInteractivePath renderUrl tidx $ TheoryProof lemma (proofPath ++ [name])) True)
+                (const $ (refDotInteractiveStaticPath renderUrl tidx $ TheoryProof lemma (proofPath ++ [name])))
                 (psInfo $ root prf')
         ]
 
@@ -622,7 +628,7 @@ subProofDiffSnippet renderUrl tidx ti s lemma proofPath ctxt prf =
         [ text ""
         , withTag "h3" [] (text "Constraint system")
         ] ++
-        [ refDotInteractiveDiffPath renderUrl tidx (DiffTheoryProof s lemma proofPath) False True
+        [ refDotInteractiveDiffPath renderUrl tidx (DiffTheoryProof s lemma proofPath) False
         | nonEmptyGraph se ]
         ++
         [ preformatted (Just "sequent") (prettyNonGraphSystem se)
@@ -691,7 +697,7 @@ subProofDiffSnippet renderUrl tidx ti s lemma proofPath ctxt prf =
     refSubCase (name, prf') =
         [ withTag "h4" [] (text "Case" <-> text name)
         , maybe (text "no proof state available")
-                (const $ refDotInteractiveDiffPath renderUrl tidx (DiffTheoryProof s lemma (proofPath ++ [name])) False True) 
+                (const $ refDotInteractiveDiffPath renderUrl tidx (DiffTheoryProof s lemma (proofPath ++ [name])) False) 
                 (psInfo $ root prf')
         ]
 
@@ -715,7 +721,7 @@ subDiffProofSnippet renderUrl tidx ti lemma proofPath ctxt prf =
         [ text ""
         , withTag "h3" [] (text "Constraint system")
         ] ++
-        [ refDotInteractiveDiffPath renderUrl tidx (DiffTheoryDiffProof lemma proofPath) False True
+        [ refDotInteractiveDiffPath renderUrl tidx (DiffTheoryDiffProof lemma proofPath) False
         | nonEmptyGraphDiff se ]
         ++
         mirrorSystem
@@ -746,16 +752,16 @@ subDiffProofSnippet renderUrl tidx ti lemma proofPath ctxt prf =
     mirrorSystem =
         if dpsMethod (root prf) == DiffMirrored
            then [ text "", withTag "h3" [] (text "mirror:") ] ++
-                [ refDotInteractiveDiffPath renderUrl tidx (DiffTheoryDiffProof lemma proofPath) True True] ++
+                [ refDotInteractiveDiffPath renderUrl tidx (DiffTheoryDiffProof lemma proofPath) True] ++
                 [ text "" ]
         else if dpsMethod (root prf) == DiffAttack
            then [ text "", withTag "h3" [] (text "attack:") ] ++
-                [ refDotInteractiveDiffPath renderUrl tidx (DiffTheoryDiffProof lemma proofPath) True True] ++
+                [ refDotInteractiveDiffPath renderUrl tidx (DiffTheoryDiffProof lemma proofPath) True] ++
                 [ text "(If no attack graph is shown, the current graph has no mirrors. If one of the mirror graphs violates a restriction, this graph is shown.)" ] ++
                 [ text "" ]
         else if dpsMethod (root prf) == DiffUnfinishable
            then [ text "", withTag "h3" [] (text "mirror:") ] ++
-                [ refDotInteractiveDiffPath renderUrl tidx (DiffTheoryDiffProof lemma proofPath) True True] ++
+                [ refDotInteractiveDiffPath renderUrl tidx (DiffTheoryDiffProof lemma proofPath) True] ++
                 [ text "The proof cannot be finished as there are reducible operators at the top of subterms in the subterm store." ] ++
                 [ text "" ]
            else []
@@ -803,7 +809,7 @@ subDiffProofSnippet renderUrl tidx ti lemma proofPath ctxt prf =
     refSubCase (name, prf') =
         [ withTag "h4" [] (text "Case" <-> text name)
         , maybe (text "no proof state available")
-                (const $ refDotInteractiveDiffPath renderUrl tidx (DiffTheoryDiffProof lemma (proofPath ++ [name])) False True)
+                (const $ refDotInteractiveDiffPath renderUrl tidx (DiffTheoryDiffProof lemma (proofPath ++ [name])) False)
                 (dpsInfo $ root prf')
         ]
 
@@ -827,7 +833,7 @@ htmlSource renderUrl tidx kind (j, th) =
       [ withTag "h3" [] $ fsep [ text "Source", int i, text "of", nCases
                                , text " / named ", doubleQuotes (text name),
                                  if isPartial then text "(partial deconstructions)" else text "" ]
-      , refDotInteractivePath renderUrl tidx (TheorySource kind j i) False
+      , refDotInteractiveStaticPath renderUrl tidx (TheorySource kind j i)
       , withTag "p" [] $ ppPrem
       , wrapP $ prettyNonGraphSystem se
       ]
@@ -855,7 +861,7 @@ htmlSourceDiff renderUrl tidx s kind d (j, th) =
       [ withTag "h3" [] $ fsep [ text "Source", int i, text "of", nCases
                                , text " / named ", doubleQuotes (text name),
                                  if isPartial then text "(partial deconstructions)" else text "" ]
-      , refDotInteractiveDiffPath renderUrl tidx (DiffTheorySource s kind d j i) False False
+      , refDotInteractiveDiffPath renderUrl tidx (DiffTheorySource s kind d j i) False
       , withTag "p" [] ppPrem
       , wrapP $ prettyNonGraphSystem se
       ]

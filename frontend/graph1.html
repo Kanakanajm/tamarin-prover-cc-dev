@@ -4,16 +4,21 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Intdot - Home</title>
+  <title>Intdot - Graph 1</title>
+  <style>
+    html,body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+  </style>
   <script type="module" src="/src/wcs/graph.ts"></script>
 </head>
 
 <body>
-    <ul>
-      <li><a href="/dynamic1">Go to Dynamic 1</a></li>
-      <li><a href="/dynamic2">Go to Dynamic 2</a></li>
-      <li><a href="/static">Go to Static</a></li>
-    </ul>
+  <dot-graph-viz dotsrc="/example.dot"></dot-graph-viz>
 </body>
 
 </html>

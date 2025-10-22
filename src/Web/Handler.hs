@@ -12,6 +12,7 @@ Portability :  non-portable
 module Web.Handler
   ( getOverviewR
   , getInteractiveOverviewR
+  , getInteractiveDotGraphR
   , postTheoryEditR
   , getTheoryVerifyR
   , getOverviewDiffR
@@ -33,6 +34,8 @@ module Web.Handler
   , getTheoryMirrorDiffR
   , getTheoryInteractiveGraphDiffR
   , getTheoryInteractiveMirrorDiffR
+  , getInteractiveDotGraphDiffR
+  , getInteractiveDotGraphMirrorDiffR
   , getAutoProverR
   , getAutoDiffProverR
   , getAutoProverDiffR
@@ -769,22 +772,44 @@ getInteractiveOverviewR idx path = withTheory idx ( \ti -> do
   renderParamsF <- getUrlRenderParams
   getParams <- reqGetParams <$> getRequest
   lptxt <- getLemmaPlaintext idx path
-  let graphOnlyMaybe = lookup "graph_only" getParams :: Maybe T.Text
-  case graphOnlyMaybe of 
-    Just graphOnly -> defaultLayout $ do 
-      setTitle (toHtml $ "Theory: " ++ ti.theory._thyName)
-      toWidget
-        [hamlet|
-            <dot-graph-viz dotsrc="#{dotPath}" popup="true">
-        |]
-      where
-      dotPath = T.unpack $ renderF (TheoryInteractiveGraphR idx path)
-    Nothing -> defaultLayout $ do
+  defaultLayout $ do
       let renderParamsF' route = renderParamsF route getParams
       overview <- liftIO $ overviewTpl renderF renderParamsF' ti path lptxt
       setTitle (toHtml $ "Theory: " ++ ti.theory._thyName)
-      overview )
+      overview)
 
+getInteractiveDotGraphR :: TheoryIdx -> TheoryPath -> Handler Html
+getInteractiveDotGraphR idx path = withTheory idx ( \ti -> do
+  renderF <- getUrlRender
+  let dotPath = T.unpack $ renderF (TheoryInteractiveGraphR idx path)
+  intdotLayout $ do 
+      setTitle (toHtml $ "Theory: " ++ ti.theory._thyName)
+      toWidget
+        [hamlet|
+            <dot-graph-viz dotsrc="#{dotPath}">
+        |])
+
+getInteractiveDotGraphDiffR :: TheoryIdx -> DiffTheoryPath -> Handler Html
+getInteractiveDotGraphDiffR idx path = withDiffTheory idx (\ti -> do
+  renderF <- getUrlRender
+  let dotPath = T.unpack $ renderF (TheoryInteractiveGraphDiffR idx path)
+  intdotLayout $ do 
+      setTitle (toHtml $ "DiffTheory: " ++ ti.theory._diffThyName)
+      toWidget
+        [hamlet|
+            <dot-graph-viz dotsrc="#{dotPath}">
+        |])
+
+getInteractiveDotGraphMirrorDiffR :: TheoryIdx -> DiffTheoryPath -> Handler Html
+getInteractiveDotGraphMirrorDiffR idx path = withDiffTheory idx (\ti -> do
+  renderF <- getUrlRender
+  let dotPath = T.unpack $ renderF (TheoryInteractiveMirrorDiffR idx path)
+  intdotLayout $ do 
+      setTitle (toHtml $ "DiffTheory: " ++ ti.theory._diffThyName)
+      toWidget
+        [hamlet|
+            <dot-graph-viz dotsrc="#{dotPath}">
+        |])
 
 -- | Show overview over diff theory (framed layout).
 getOverviewDiffR :: TheoryIdx -> DiffTheoryPath -> Handler Html
@@ -800,19 +825,7 @@ getOverviewDiffR idx path = withDiffTheory idx $ \ti -> do
 getInteractiveOverviewDiffR :: TheoryIdx -> DiffTheoryPath -> Handler Html
 getInteractiveOverviewDiffR idx path = withDiffTheory idx ( \ti -> do
   renderF <- getUrlRender
-  renderParamsF <- getUrlRenderParams
-  getParams <- reqGetParams <$> getRequest
-  let graphOnlyMaybe = lookup "graph_only" getParams :: Maybe T.Text
-  case graphOnlyMaybe of 
-    Just graphOnly -> defaultLayout $ do 
-      setTitle (toHtml $ "DiffTheory: " ++ ti.theory._diffThyName)
-      toWidget
-        [hamlet|
-            <dot-graph-viz dotsrc="#{dotPath}" popup="true">
-        |]
-      where
-      dotPath = T.unpack $ renderF (TheoryInteractiveGraphDiffR idx path)
-    Nothing -> defaultLayout $ do
+  defaultLayout $ do
       overview <- liftIO $ overviewDiffTpl renderF ti path
       setTitle (toHtml $ "DiffTheory: " ++ ti.theory._diffThyName)
       overview )
