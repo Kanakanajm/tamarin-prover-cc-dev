@@ -178,7 +178,6 @@ export class DotGraphViz extends HTMLElement {
   // }
 
   connectedCallback() {
-    debugger;
     this.dotSrc = this.getAttribute("dotsrc");
 
     if(this.dotSrc?.includes('interactive-graph'))
@@ -250,7 +249,6 @@ export class DotGraphViz extends HTMLElement {
   }
 
   renderSource = async () => {
-    debugger;
     if (!this.dotSrc || !this.dotSrc.trim().length) {
       console.error("No dot graph source url provided.");
       return;
@@ -307,24 +305,12 @@ export class DotGraphViz extends HTMLElement {
       
   }
 
+  // Render the graph using JSON string
   renderJson = (jsonString: any) => {
-    // instance().then(vi z => {
-      debugger;
       console.debug("Received Json string");
-        console.debug(jsonString);
-        this.jsonGraph = new JsonDiGraph(jsonString);
+      this.jsonGraph = new JsonDiGraph(jsonString);
 
-        console.debug("jsonGraph: " , this.jsonGraph);
-        // this.svg = viz.renderSVGElement(jsonString);
-        //   this.json = viz.renderJSON(jsonString) as VizGraph;
-        //   this.graph = new DiGraph(this.json, this.svg);
-
-        //   // debug infos
-        //   console.log("Received Json string");
-        //   console.log(this.svg);
-        //   console.log(this.json);
-        //   console.log(this.graph);
-    // });
+      console.debug("jsonGraph: " , this.jsonGraph);
   }
   /** Render the graph as SVG given dot graph definition
    * 
@@ -332,7 +318,6 @@ export class DotGraphViz extends HTMLElement {
    */
   render = (dotString: string) => {
     instance().then(viz => {
-      debugger;
       /* Resetting all the components */
       this.innerHTML = "";
       this.svg = undefined;
@@ -356,7 +341,6 @@ export class DotGraphViz extends HTMLElement {
 
       this.svg = viz.renderSVGElement(dotString);
       this.json = viz.renderJSON(dotString) as VizGraph;
-      console.debug('this.jsonGraph?.jsonString= ',this.jsonGraph);
       this.graph = new DiGraph(this.json, this.svg, this.jsonGraph?.jsonString);
 
       // debug infos
@@ -519,7 +503,6 @@ export class DotGraphViz extends HTMLElement {
     return promise;
   };
   fetchJsonString = (url: string): Promise<any> => {
-  debugger;
   const { promise, resolve, reject } = Promise.withResolvers<any>();
 
     this.cancelFetch = () => {
@@ -792,7 +775,6 @@ export class DotGraphViz extends HTMLElement {
     When an abbreviation is clicked in the table, all graph nodes containing that abbreviation are highlighted. 
   */
   handleAbbreviationTextClick = (event: MouseEvent) => {
-  debugger;
     if (!this.graph)
       return;
     const el = event.target as HTMLElement;
