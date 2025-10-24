@@ -70,7 +70,7 @@ export class DiGraph {
         }
 
     //extract abbreviations
-    constructor(vizGraph: VizGraph, svg: SVGSVGElement, jsonGraphSrc?: JsonGraph) {
+    constructor(vizGraph: VizGraph, svg: SVGSVGElement) {
         const abbrevObj = (vizGraph.objects ?? []).find(n => n.shape === "plain");
         if (abbrevObj) {
             // find abbreviation table's element id
@@ -102,14 +102,7 @@ export class DiGraph {
                     title: cur.name,
                     minimizable: cur.shape === "record"
                 }
-                //Abbreviations mapped using JSON string
-                Object.keys(this.abbrev.abbreviations).forEach(k => {
-                    jsonGraphSrc?.graphs[0].jgAbbrevs.forEach(abb => {
-                        if (abb.jgaExpansion.jgnShow?.includes(k)) {
-                            this.abbrev.abbreviations[abb.jgaAbbrev.jgnConst].push(...this.abbrev.abbreviations[k]);
-                        }
-                    })
-                });
+                
 
                 return acc
             }, {} as NodeDict

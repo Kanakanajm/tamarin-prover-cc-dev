@@ -341,7 +341,7 @@ export class DotGraphViz extends HTMLElement {
 
       this.svg = viz.renderSVGElement(dotString);
       this.json = viz.renderJSON(dotString) as VizGraph;
-      this.graph = new DiGraph(this.json, this.svg, this.jsonGraph?.jsonString);
+      this.graph = new DiGraph(this.json, this.svg);
 
       // debug infos
       console.debug("Received dot string:");
