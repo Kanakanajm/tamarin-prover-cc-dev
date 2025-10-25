@@ -250,16 +250,6 @@ export class DotGraphViz extends HTMLElement {
 
         const abbrevTblEl = abbrevTbl.node()!;
         const abbrevTblElBBox = abbrevTblEl.getBBox();
-        const graphBBox = this.svgg!.getBBox();
-        const marginX = 10;
-        const marginY = 10;
-        const dx = graphBBox.x + graphBBox.width - abbrevTblElBBox.width - abbrevTblElBBox.x - marginX;
-        const dy = graphBBox.y + graphBBox.height - abbrevTblElBBox.height - abbrevTblElBBox.y - marginY;
-
-        const abbrevTblBottomRightPoint: Vec2 = {
-          x: abbrevTblElBBox.width + abbrevTblElBBox.x,
-          y: abbrevTblElBBox.height + abbrevTblElBBox.y
-        }
 
         // inserting a rectangle box before the text 
         abbrevTbl.insert("rect", "text")
@@ -268,8 +258,20 @@ export class DotGraphViz extends HTMLElement {
           .attr("x", abbrevTblElBBox.x)
           .attr("y", abbrevTblElBBox.y)
           .attr("fill", "white");
+
+        // transform matrix from screen coordinate to user coordinate
+        const m = this.svg.getCTM()?.inverse();
+        // bottom right corner of the svg container in screen coordinate
+        const pt_br_screen = new DOMPoint(this.svg.clientWidth, this.svg.clientHeight);
+        // bottom right corner of the svg container in user coordinate
+        const pt_br_user = pt_br_screen.matrixTransform(m);
+
+        // first translate the abbreviation box (top-left corner) to origin
+        // then translate to the bottom right corner of the svg container with 10 unit of margin
         abbrevTbl
-          .attr("transform", `${this.initTransform} translate(${dx} ${dy}) translate(${abbrevTblBottomRightPoint.x} ${abbrevTblBottomRightPoint.y}) scale(${ABBREVIATION_TABLE_SCALE}) translate(${-abbrevTblBottomRightPoint.x} ${-abbrevTblBottomRightPoint.y})`);
+          .attr("transform", `translate(${-abbrevTblElBBox.x} ${-abbrevTblElBBox.y}) ` 
+            + `translate(${pt_br_user.x - abbrevTblElBBox.width - 10} ${pt_br_user.y - abbrevTblElBBox.height - 10})`
+          );
 
         this.svg.appendChild(abbrevTblEl);
       }
