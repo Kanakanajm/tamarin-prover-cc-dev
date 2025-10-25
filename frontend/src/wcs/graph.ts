@@ -133,9 +133,34 @@ export class DotGraphViz extends HTMLElement {
     edges: []
   }
 
+  resizeObserver?: ResizeObserver;
+
 
   constructor() {
     super();
+  }
+
+  repositionAbbreviationTable() {
+    const svg = select(this).selectChild<SVGSVGElement>("svg");
+    const tbl = svg.selectChild<SVGGElement>("g.abbrev-table");
+    if (svg.size() === 1 && tbl.size() === 1) {
+        // transform matrix from screen coordinate to user coordinate
+        const m = svg.node()!.getCTM()?.inverse();
+        // bottom right corner of the svg container in screen coordinate
+        const pt_br_screen = new DOMPoint(svg.node()!.clientWidth, svg.node()!.clientHeight);
+        // bottom right corner of the svg container in user coordinate
+        const pt_br_user = pt_br_screen.matrixTransform(m);
+
+        // bounding box of abbreviation table
+        const abbrevTblElBBox = tbl.node()!.getBBox();
+
+        // first translate the abbreviation box (top-left corner) to origin
+        // then translate to the bottom right corner of the svg container with 10 unit of margin
+        tbl
+          .attr("transform", `translate(${-abbrevTblElBBox.x} ${-abbrevTblElBBox.y}) ` 
+            + `translate(${pt_br_user.x - abbrevTblElBBox.width - 10} ${pt_br_user.y - abbrevTblElBBox.height - 10})`
+          );
+    }
   }
 
   // attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null) {
@@ -158,12 +183,24 @@ export class DotGraphViz extends HTMLElement {
       return;
     }
 
+    this.resizeObserver = new ResizeObserver(entries => {
+      for (const _ of entries) {
+        this.repositionAbbreviationTable();
+      }
+    });
+
+    this.resizeObserver.observe(this);
+
     this.fetchDotString(this.dotSrc)
       .then((d) => {
         this.render(d);
       }).catch(err => {
           console.error("[dot-graph-viz]: Error occurs during fetch\n", err);
     });
+  }
+
+  disconnectedCallback() {
+    this.resizeObserver?.disconnect();
   }
 
   /** Render the graph as SVG given dot graph definition
@@ -259,21 +296,9 @@ export class DotGraphViz extends HTMLElement {
           .attr("y", abbrevTblElBBox.y)
           .attr("fill", "white");
 
-        // transform matrix from screen coordinate to user coordinate
-        const m = this.svg.getCTM()?.inverse();
-        // bottom right corner of the svg container in screen coordinate
-        const pt_br_screen = new DOMPoint(this.svg.clientWidth, this.svg.clientHeight);
-        // bottom right corner of the svg container in user coordinate
-        const pt_br_user = pt_br_screen.matrixTransform(m);
-
-        // first translate the abbreviation box (top-left corner) to origin
-        // then translate to the bottom right corner of the svg container with 10 unit of margin
-        abbrevTbl
-          .attr("transform", `translate(${-abbrevTblElBBox.x} ${-abbrevTblElBBox.y}) ` 
-            + `translate(${pt_br_user.x - abbrevTblElBBox.width - 10} ${pt_br_user.y - abbrevTblElBBox.height - 10})`
-          );
-
         this.svg.appendChild(abbrevTblEl);
+
+        this.repositionAbbreviationTable();
       }
 
       this.checkDotSrcParamChangeInterval = setInterval(() => {
