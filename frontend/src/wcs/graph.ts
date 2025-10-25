@@ -10,7 +10,6 @@ const ZOOM_LEVEL_THRESHOLD = 0.99;
 const ARROW_HEAD_WIDTH = 7;
 const ARROW_HEAD_HEIGHT = 10;
 const ARROW_HEAD_HALF_WIDTH = ARROW_HEAD_WIDTH / 2;
-const ABBREVIATION_TABLE_SCALE = 1.5;
 const MAX_FONT = 30;
 
 type ZoomLevel = "ZoomIn" | "ZoomOut";
