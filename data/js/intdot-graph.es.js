@@ -1,6 +1,6 @@
 var zg = Object.defineProperty;
 var Tg = (A, I, C) => I in A ? zg(A, I, { enumerable: !0, configurable: !0, writable: !0, value: C }) : A[I] = C;
-var O = (A, I, C) => Tg(A, typeof I != "symbol" ? I + "" : I, C);
+var f = (A, I, C) => Tg(A, typeof I != "symbol" ? I + "" : I, C);
 /*!
 Viz.js 3.14.0
 Copyright (c) 2023 Michael Daines
@@ -39,7 +39,7 @@ var Xg = function(A = {}) {
       } else h += String.fromCharCode(N);
     }
     return h;
-  }, f = (g, Q) => g ? V(G, g, Q) : "";
+  }, O = (g, Q) => g ? V(G, g, Q) : "";
   class $ {
     constructor(Q) {
       this.excPtr = Q, this.ptr = Q - 24;
@@ -78,7 +78,7 @@ var Xg = function(A = {}) {
       return M[this.ptr + 16 >> 2];
     }
   }
-  var e = { isAbs: (g) => g.charAt(0) === "/", splitPath: (g) => /^(\/?|)([\s\S]*?)((?:\.{1,2}|[^\/]+?|)(\.[^.\/]*|))(?:[\/]*)$/.exec(g).slice(1), normalizeArray: (g, Q) => {
+  var Z = { isAbs: (g) => g.charAt(0) === "/", splitPath: (g) => /^(\/?|)([\s\S]*?)((?:\.{1,2}|[^\/]+?|)(\.[^.\/]*|))(?:[\/]*)$/.exec(g).slice(1), normalizeArray: (g, Q) => {
     for (var D = 0, w = g.length - 1; w >= 0; w--) {
       var R = g[w];
       R === "." ? g.splice(w, 1) : R === ".." ? (g.splice(w, 1), D++) : D && (g.splice(w, 1), D--);
@@ -86,16 +86,16 @@ var Xg = function(A = {}) {
     if (Q) for (; D; D--) g.unshift("..");
     return g;
   }, normalize: (g) => {
-    var Q = e.isAbs(g), D = g.substr(-1) === "/";
-    return (g = e.normalizeArray(g.split("/").filter(((w) => !!w)), !Q).join("/")) || Q || (g = "."), g && D && (g += "/"), (Q ? "/" : "") + g;
+    var Q = Z.isAbs(g), D = g.substr(-1) === "/";
+    return (g = Z.normalizeArray(g.split("/").filter(((w) => !!w)), !Q).join("/")) || Q || (g = "."), g && D && (g += "/"), (Q ? "/" : "") + g;
   }, dirname: (g) => {
-    var Q = e.splitPath(g), D = Q[0], w = Q[1];
+    var Q = Z.splitPath(g), D = Q[0], w = Q[1];
     return D || w ? (w && (w = w.substr(0, w.length - 1)), D + w) : ".";
   }, basename: (g) => {
     if (g === "/") return "/";
-    var Q = (g = (g = e.normalize(g)).replace(/\/$/, "")).lastIndexOf("/");
+    var Q = (g = (g = Z.normalize(g)).replace(/\/$/, "")).lastIndexOf("/");
     return Q === -1 ? g : g.substr(Q + 1);
-  }, join: (...g) => e.normalize(g.join("/")), join2: (g, Q) => e.normalize(g + "/" + Q) }, j = (g) => (j = (() => {
+  }, join: (...g) => Z.normalize(g.join("/")), join2: (g, Q) => Z.normalize(g + "/" + Q) }, j = (g) => (j = (() => {
     if (typeof crypto == "object" && typeof crypto.getRandomValues == "function") return (Q) => crypto.getRandomValues(Q);
     W("initRandomDevice");
   })())(g), X = { resolve: (...g) => {
@@ -103,14 +103,14 @@ var Xg = function(A = {}) {
       var R = w >= 0 ? g[w] : E.cwd();
       if (typeof R != "string") throw new TypeError("Arguments to path.resolve must be strings");
       if (!R) return "";
-      Q = R + "/" + Q, D = e.isAbs(R);
+      Q = R + "/" + Q, D = Z.isAbs(R);
     }
-    return (D ? "/" : "") + (Q = e.normalizeArray(Q.split("/").filter(((h) => !!h)), !D).join("/")) || ".";
+    return (D ? "/" : "") + (Q = Z.normalizeArray(Q.split("/").filter(((h) => !!h)), !D).join("/")) || ".";
   }, relative: (g, Q) => {
     function D(t) {
-      for (var Z = 0; Z < t.length && t[Z] === ""; Z++) ;
+      for (var e = 0; e < t.length && t[e] === ""; e++) ;
       for (var r = t.length - 1; r >= 0 && t[r] === ""; r--) ;
-      return Z > r ? [] : t.slice(Z, r - Z + 1);
+      return e > r ? [] : t.slice(e, r - e + 1);
     }
     g = X.resolve(g).substr(1), Q = X.resolve(Q).substr(1);
     for (var w = D(g.split("/")), R = D(Q.split("/")), h = Math.min(w.length, R.length), N = h, K = 0; K < h; K++) if (w[K] !== R[K]) {
@@ -355,9 +355,9 @@ var Xg = function(A = {}) {
     for (var D = g.split("/").filter(((t) => !!t)), w = E.root, R = "/", h = 0; h < D.length; h++) {
       var N = h === D.length - 1;
       if (N && Q.parent) break;
-      if (w = E.lookupNode(w, D[h]), R = e.join2(R, D[h]), E.isMountpoint(w) && (!N || N && Q.follow_mount) && (w = w.mounted.root), !N || Q.follow) for (var K = 0; E.isLink(w.mode); ) {
+      if (w = E.lookupNode(w, D[h]), R = Z.join2(R, D[h]), E.isMountpoint(w) && (!N || N && Q.follow_mount) && (w = w.mounted.root), !N || Q.follow) for (var K = 0; E.isLink(w.mode); ) {
         var a = E.readlink(R);
-        if (R = X.resolve(e.dirname(R), a), w = E.lookupPath(R, { recurse_count: Q.recurse_count + 1 }).node, K++ > 40) throw new E.ErrnoError(32);
+        if (R = X.resolve(Z.dirname(R), a), w = E.lookupPath(R, { recurse_count: Q.recurse_count + 1 }).node, K++ > 40) throw new E.ErrnoError(32);
       }
     }
     return { path: R, node: w };
@@ -489,7 +489,7 @@ var Xg = function(A = {}) {
     var h = D.mount.mounts.indexOf(w);
     D.mount.mounts.splice(h, 1);
   }, lookup: (g, Q) => g.node_ops.lookup(g, Q), mknod(g, Q, D) {
-    var w = E.lookupPath(g, { parent: !0 }).node, R = e.basename(g);
+    var w = E.lookupPath(g, { parent: !0 }).node, R = Z.basename(g);
     if (!R || R === "." || R === "..") throw new E.ErrnoError(28);
     var h = E.mayCreate(w, R);
     if (h) throw new E.ErrnoError(h);
@@ -508,17 +508,17 @@ var Xg = function(A = {}) {
     if (!X.resolve(g)) throw new E.ErrnoError(44);
     var D = E.lookupPath(Q, { parent: !0 }).node;
     if (!D) throw new E.ErrnoError(44);
-    var w = e.basename(Q), R = E.mayCreate(D, w);
+    var w = Z.basename(Q), R = E.mayCreate(D, w);
     if (R) throw new E.ErrnoError(R);
     if (!D.node_ops.symlink) throw new E.ErrnoError(63);
     return D.node_ops.symlink(D, w, g);
   }, rename(g, Q) {
-    var D, w, R = e.dirname(g), h = e.dirname(Q), N = e.basename(g), K = e.basename(Q);
+    var D, w, R = Z.dirname(g), h = Z.dirname(Q), N = Z.basename(g), K = Z.basename(Q);
     if (D = E.lookupPath(g, { parent: !0 }).node, w = E.lookupPath(Q, { parent: !0 }).node, !D || !w) throw new E.ErrnoError(44);
     if (D.mount !== w.mount) throw new E.ErrnoError(75);
-    var a, t = E.lookupNode(D, N), Z = X.relative(g, h);
-    if (Z.charAt(0) !== ".") throw new E.ErrnoError(28);
-    if ((Z = X.relative(Q, R)).charAt(0) !== ".") throw new E.ErrnoError(55);
+    var a, t = E.lookupNode(D, N), e = X.relative(g, h);
+    if (e.charAt(0) !== ".") throw new E.ErrnoError(28);
+    if ((e = X.relative(Q, R)).charAt(0) !== ".") throw new E.ErrnoError(55);
     try {
       a = E.lookupNode(w, K);
     } catch {
@@ -540,7 +540,7 @@ var Xg = function(A = {}) {
       }
     }
   }, rmdir(g) {
-    var Q = E.lookupPath(g, { parent: !0 }).node, D = e.basename(g), w = E.lookupNode(Q, D), R = E.mayDelete(Q, D, !0);
+    var Q = E.lookupPath(g, { parent: !0 }).node, D = Z.basename(g), w = E.lookupNode(Q, D), R = E.mayDelete(Q, D, !0);
     if (R) throw new E.ErrnoError(R);
     if (!Q.node_ops.rmdir) throw new E.ErrnoError(63);
     if (E.isMountpoint(w)) throw new E.ErrnoError(10);
@@ -552,7 +552,7 @@ var Xg = function(A = {}) {
   }, unlink(g) {
     var Q = E.lookupPath(g, { parent: !0 }).node;
     if (!Q) throw new E.ErrnoError(44);
-    var D = e.basename(g), w = E.lookupNode(Q, D), R = E.mayDelete(Q, D, !1);
+    var D = Z.basename(g), w = E.lookupNode(Q, D), R = E.mayDelete(Q, D, !1);
     if (R) throw new E.ErrnoError(R);
     if (!Q.node_ops.unlink) throw new E.ErrnoError(63);
     if (E.isMountpoint(w)) throw new E.ErrnoError(10);
@@ -610,7 +610,7 @@ var Xg = function(A = {}) {
       return a;
     })(Q) : Q) ? 4095 & (D = D === void 0 ? 438 : D) | 32768 : 0, typeof g == "object") w = g;
     else {
-      g = e.normalize(g);
+      g = Z.normalize(g);
       try {
         w = E.lookupPath(g, { follow: !(131072 & Q) }).node;
       } catch {
@@ -749,7 +749,7 @@ var Xg = function(A = {}) {
     var D = { isRoot: !1, exists: !1, error: 0, name: null, path: null, object: null, parentExists: !1, parentPath: null, parentObject: null };
     try {
       var w = E.lookupPath(g, { parent: !0 });
-      D.parentExists = !0, D.parentPath = w.path, D.parentObject = w.node, D.name = e.basename(g), w = E.lookupPath(g, { follow: !Q }), D.exists = !0, D.path = w.path, D.object = w.node, D.name = w.node.name, D.isRoot = w.path === "/";
+      D.parentExists = !0, D.parentPath = w.path, D.parentObject = w.node, D.name = Z.basename(g), w = E.lookupPath(g, { follow: !Q }), D.exists = !0, D.path = w.path, D.object = w.node, D.name = w.node.name, D.isRoot = w.path === "/";
     } catch (R) {
       D.error = R.errno;
     }
@@ -759,7 +759,7 @@ var Xg = function(A = {}) {
     for (var R = Q.split("/").reverse(); R.length; ) {
       var h = R.pop();
       if (h) {
-        var N = e.join2(g, h);
+        var N = Z.join2(g, h);
         try {
           E.mkdir(N);
         } catch {
@@ -769,15 +769,15 @@ var Xg = function(A = {}) {
     }
     return N;
   }, createFile(g, Q, D, w, R) {
-    var h = e.join2(typeof g == "string" ? g : E.getPath(g), Q), N = L(w, R);
+    var h = Z.join2(typeof g == "string" ? g : E.getPath(g), Q), N = L(w, R);
     return E.create(h, N);
   }, createDataFile(g, Q, D, w, R, h) {
     var N = Q;
-    g && (g = typeof g == "string" ? g : E.getPath(g), N = Q ? e.join2(g, Q) : g);
+    g && (g = typeof g == "string" ? g : E.getPath(g), N = Q ? Z.join2(g, Q) : g);
     var K = L(w, R), a = E.create(N, K);
     if (D) {
       if (typeof D == "string") {
-        for (var t = new Array(D.length), Z = 0, r = D.length; Z < r; ++Z) t[Z] = D.charCodeAt(Z);
+        for (var t = new Array(D.length), e = 0, r = D.length; e < r; ++e) t[e] = D.charCodeAt(e);
         D = t;
       }
       E.chmod(a, 146 | K);
@@ -786,7 +786,7 @@ var Xg = function(A = {}) {
     }
   }, createDevice(g, Q, D, w) {
     var K;
-    var R = e.join2(typeof g == "string" ? g : E.getPath(g), Q), h = L(!!D, !!w);
+    var R = Z.join2(typeof g == "string" ? g : E.getPath(g), Q), h = L(!!D, !!w);
     (K = E.createDevice).major ?? (K.major = 64);
     var N = E.makedev(E.createDevice.major++, 0);
     return E.registerDevice(N, { open(a) {
@@ -794,7 +794,7 @@ var Xg = function(A = {}) {
     }, close(a) {
       var t;
       (t = w == null ? void 0 : w.buffer) != null && t.length && w(10);
-    }, read(a, t, Z, r, d) {
+    }, read(a, t, e, r, d) {
       for (var H = 0, p = 0; p < r; p++) {
         var m;
         try {
@@ -804,12 +804,12 @@ var Xg = function(A = {}) {
         }
         if (m === void 0 && H === 0) throw new E.ErrnoError(6);
         if (m == null) break;
-        H++, t[Z + p] = m;
+        H++, t[e + p] = m;
       }
       return H && (a.node.timestamp = Date.now()), H;
-    }, write(a, t, Z, r, d) {
+    }, write(a, t, e, r, d) {
       for (var H = 0; H < r; H++) try {
-        w(t[Z + H]);
+        w(t[e + H]);
       } catch {
         throw new E.ErrnoError(29);
       }
@@ -871,31 +871,31 @@ var Xg = function(A = {}) {
       return this.contents.length;
     } } });
     var a = {};
-    function t(Z, r, d, H, p) {
-      var m = Z.node.contents;
+    function t(e, r, d, H, p) {
+      var m = e.node.contents;
       if (p >= m.length) return 0;
       var _ = Math.min(m.length - p, H);
       if (m.slice) for (var T = 0; T < _; T++) r[d + T] = m[p + T];
       else for (T = 0; T < _; T++) r[d + T] = m.get(p + T);
       return _;
     }
-    return Object.keys(K.stream_ops).forEach(((Z) => {
-      var r = K.stream_ops[Z];
-      a[Z] = (...d) => (E.forceLoadFile(K), r(...d));
-    })), a.read = (Z, r, d, H, p) => (E.forceLoadFile(K), t(Z, r, d, H, p)), a.mmap = (Z, r, d, H, p) => {
+    return Object.keys(K.stream_ops).forEach(((e) => {
+      var r = K.stream_ops[e];
+      a[e] = (...d) => (E.forceLoadFile(K), r(...d));
+    })), a.read = (e, r, d, H, p) => (E.forceLoadFile(K), t(e, r, d, H, p)), a.mmap = (e, r, d, H, p) => {
       E.forceLoadFile(K);
       var m = k(r);
       if (!m) throw new E.ErrnoError(48);
-      return t(Z, B, m, r, d), { ptr: m, allocated: !0 };
+      return t(e, B, m, r, d), { ptr: m, allocated: !0 };
     }, K.stream_ops = a, K;
   } }, J = { DEFAULT_POLLMASK: 5, calculateAt(g, Q, D) {
-    if (e.isAbs(Q)) return Q;
+    if (Z.isAbs(Q)) return Q;
     var w;
     if (g === -100 ? w = E.cwd() : w = J.getStreamFromFD(g).path, Q.length == 0) {
       if (!D) throw new E.ErrnoError(44);
       return w;
     }
-    return e.join2(w, Q);
+    return Z.join2(w, Q);
   }, doStat(g, Q, D) {
     var w = g(Q);
     o[D >> 2] = w.dev, o[D + 4 >> 2] = w.mode, M[D + 8 >> 2] = w.nlink, o[D + 12 >> 2] = w.uid, o[D + 16 >> 2] = w.gid, o[D + 20 >> 2] = w.rdev, y[D + 24 >> 3] = BigInt(w.size), o[D + 32 >> 2] = 4096, o[D + 36 >> 2] = w.blocks;
@@ -906,7 +906,7 @@ var Xg = function(A = {}) {
     if (2 & w) return 0;
     var h = G.slice(g, g + D);
     E.msync(Q, h, R, D, w);
-  }, getStreamFromFD: (g) => E.getStreamChecked(g), varargs: void 0, getStr: (g) => f(g) };
+  }, getStreamFromFD: (g) => E.getStreamChecked(g), varargs: void 0, getStr: (g) => O(g) };
   function q() {
     var g = o[+J.varargs >> 2];
     return J.varargs += 4, g;
@@ -930,7 +930,7 @@ var Xg = function(A = {}) {
     throw `exit(${g})`;
   }, aA = (g) => vI(g);
   E.createPreloadedFile = (g, Q, D, w, R, h, N, K, a, t) => {
-    var Z = Q ? X.resolve(e.join2(g, Q)) : g, r = getUniqueRunDependency(`cp ${Z}`);
+    var e = Q ? X.resolve(Z.join2(g, Q)) : g, r = getUniqueRunDependency(`cp ${e}`);
     function d(H) {
       (function(p) {
         t == null || t(), K || ((m, _, T, wA, sI, rA) => {
@@ -949,7 +949,7 @@ var Xg = function(A = {}) {
     })(D, d, N) : d(D);
   }, E.staticInit();
   var OI, VI, vI, pI, Pg = { a: (g, Q, D, w) => {
-    W(`Assertion failed: ${f(g)}, at: ` + [Q ? f(Q) : "unknown filename", D, w ? f(w) : "unknown function"]);
+    W(`Assertion failed: ${O(g)}, at: ` + [Q ? O(Q) : "unknown filename", D, w ? O(w) : "unknown function"]);
   }, b: (g, Q, D) => {
     throw new $(g).init(Q, D), g;
   }, x: function(g, Q, D, w) {
@@ -1025,9 +1025,9 @@ var Xg = function(A = {}) {
           if (!w.tty) return -59;
           if (w.tty.ops.ioctl_tcsets) {
             h = l();
-            var K = o[h >> 2], a = o[h + 4 >> 2], t = o[h + 8 >> 2], Z = o[h + 12 >> 2], r = [];
+            var K = o[h >> 2], a = o[h + 4 >> 2], t = o[h + 8 >> 2], e = o[h + 12 >> 2], r = [];
             for (N = 0; N < 32; N++) r.push(B[h + N + 17]);
-            return w.tty.ops.ioctl_tcsets(w.tty, Q, { c_iflag: K, c_oflag: a, c_cflag: t, c_lflag: Z, c_cc: r });
+            return w.tty.ops.ioctl_tcsets(w.tty, Q, { c_iflag: K, c_oflag: a, c_cflag: t, c_lflag: e, c_cc: r });
           }
           return 0;
         case 21519:
@@ -1095,9 +1095,9 @@ var Xg = function(A = {}) {
       if (isNaN(R)) return 61;
       var K = J.getStreamFromFD(w), a = E.mmap(K, g, R, Q, D), t = a.ptr;
       return o[h >> 2] = a.allocated, M[N >> 2] = t, 0;
-    } catch (Z) {
-      if (E === void 0 || Z.name !== "ErrnoError") throw Z;
-      return -Z.errno;
+    } catch (e) {
+      if (E === void 0 || e.name !== "ErrnoError") throw e;
+      return -e.errno;
     }
   }, n: function(g, Q, D, w, R, h) {
     h = IA(h);
@@ -1111,10 +1111,10 @@ var Xg = function(A = {}) {
   }, q: (g, Q, D, w) => {
     var R = (/* @__PURE__ */ new Date()).getFullYear(), h = new Date(R, 0, 1), N = new Date(R, 6, 1), K = h.getTimezoneOffset(), a = N.getTimezoneOffset(), t = Math.max(K, a);
     M[g >> 2] = 60 * t, o[Q >> 2] = +(K != a);
-    var Z = (H) => {
+    var e = (H) => {
       var p = H >= 0 ? "-" : "+", m = Math.abs(H);
       return `UTC${p}${String(Math.floor(m / 60)).padStart(2, "0")}${String(m % 60).padStart(2, "0")}`;
-    }, r = Z(K), d = Z(a);
+    }, r = e(K), d = e(a);
     a < K ? (u(r, D, 17), u(d, w, 17)) : (u(r, w, 17), u(d, D, 17));
   }, g: () => Date.now(), k: (g) => {
     var Q = G.length, D = 2147483648;
@@ -1151,7 +1151,7 @@ var Xg = function(A = {}) {
   }, d: function(g, Q, D, w) {
     try {
       var R = ((h, N, K, a) => {
-        for (var t = 0, Z = 0; Z < K; Z++) {
+        for (var t = 0, e = 0; e < K; e++) {
           var r = M[N >> 2], d = M[N + 4 >> 2];
           N += 8;
           var H = E.read(h, B, r, d, a);
@@ -1179,7 +1179,7 @@ var Xg = function(A = {}) {
   }, c: function(g, Q, D, w) {
     try {
       var R = ((h, N, K, a) => {
-        for (var t = 0, Z = 0; Z < K; Z++) {
+        for (var t = 0, e = 0; e < K; e++) {
           var r = M[N >> 2], d = M[N + 4 >> 2];
           N += 8;
           var H = E.write(h, B, r, d, a);
@@ -1195,7 +1195,7 @@ var Xg = function(A = {}) {
       return h.errno;
     }
   }, o: function(g) {
-    return U.agerrMessages.push(f(g)), 0;
+    return U.agerrMessages.push(O(g)), 0;
   } };
   U.ccall = (g, Q, D, w, R) => {
     var h = { string: (d) => {
@@ -1209,13 +1209,13 @@ var Xg = function(A = {}) {
       return H = d, p = m, B.set(H, p), m;
     } }, N = ((d) => U["_" + d])(g), K = [], a = 0;
     if (w) for (var t = 0; t < w.length; t++) {
-      var Z = h[D[t]];
-      Z ? (a === 0 && (a = pI()), K[t] = Z(w[t])) : K[t] = w[t];
+      var e = h[D[t]];
+      e ? (a === 0 && (a = pI()), K[t] = e(w[t])) : K[t] = w[t];
     }
     var r = N(...K);
     return r = (function(d) {
       return a !== 0 && VI(a), (function(H) {
-        return Q === "string" ? f(H) : Q === "boolean" ? !!H : H;
+        return Q === "string" ? O(H) : Q === "boolean" ? !!H : H;
       })(d);
     })(r);
   }, U.getValue = function(g, Q = "i8") {
@@ -1238,7 +1238,7 @@ var Xg = function(A = {}) {
       default:
         W(`invalid type for getValue: ${Q}`);
     }
-  }, U.PATH = e, U.UTF8ToString = f, U.stringToUTF8 = u, U.lengthBytesUTF8 = QA, U.FS = E;
+  }, U.PATH = Z, U.UTF8ToString = O, U.stringToUTF8 = u, U.lengthBytesUTF8 = QA, U.FS = E;
   var ug = { a: Pg };
   return WebAssembly.instantiate(U.wasm, ug).then(((g) => {
     var Q = g.instance.exports;
@@ -1488,13 +1488,13 @@ function dI(A) {
 }
 function BC() {
 }
-function ZI(A) {
+function eI(A) {
   return A == null ? BC : function() {
     return this.querySelector(A);
   };
 }
 function EC(A) {
-  typeof A != "function" && (A = ZI(A));
+  typeof A != "function" && (A = eI(A));
   for (var I = this._groups, C = I.length, B = new Array(C), i = 0; i < C; ++i)
     for (var o = I[i], G = o.length, M = B[i] = new Array(G), s, F, y = 0; y < G; ++y)
       (s = o[y]) && (F = A.call(s, s.__data__, y, o)) && ("__data__" in s && (F.__data__ = s.__data__), M[y] = F);
@@ -1618,10 +1618,10 @@ function LC(A, I) {
   for (var o = i.length, G = new Array(o), M = new Array(o), s = new Array(o), F = 0; F < o; ++F) {
     var y = B[F], S = i[F], U = S.length, Y = aC(A.call(y, y && y.__data__, F, B)), x = Y.length, W = M[F] = new Array(x), P = G[F] = new Array(x), n = s[F] = new Array(U);
     C(y, S, W, P, n, Y, I);
-    for (var V = 0, f = 0, $, e; V < x; ++V)
+    for (var V = 0, O = 0, $, Z; V < x; ++V)
       if ($ = W[V]) {
-        for (V >= f && (f = V + 1); !(e = P[f]) && ++f < x; ) ;
-        $._next = e || null;
+        for (V >= O && (O = V + 1); !(Z = P[O]) && ++O < x; ) ;
+        $._next = Z || null;
       }
   }
   return G = new gA(G, B), G._enter = M, G._exit = s, G;
@@ -1669,10 +1669,10 @@ function dC() {
   var A = arguments[0];
   return arguments[0] = this, A.apply(null, arguments), this;
 }
-function ZC() {
+function eC() {
   return Array.from(this);
 }
-function eC() {
+function ZC() {
   for (var A = this._groups, I = 0, C = A.length; I < C; ++I)
     for (var B = A[I], i = 0, o = B.length; i < o; ++i) {
       var G = B[i];
@@ -1781,7 +1781,7 @@ function _C(A, I) {
 function Jg(A) {
   return A.trim().split(/^|\s+/);
 }
-function eI(A) {
+function ZI(A) {
   return A.classList || new Hg(A);
 }
 function Hg(A) {
@@ -1801,10 +1801,10 @@ Hg.prototype = {
   }
 };
 function tg(A, I) {
-  for (var C = eI(A), B = -1, i = I.length; ++B < i; ) C.add(I[B]);
+  for (var C = ZI(A), B = -1, i = I.length; ++B < i; ) C.add(I[B]);
 }
 function rg(A, I) {
-  for (var C = eI(A), B = -1, i = I.length; ++B < i; ) C.remove(I[B]);
+  for (var C = ZI(A), B = -1, i = I.length; ++B < i; ) C.remove(I[B]);
 }
 function $C(A) {
   return function() {
@@ -1824,7 +1824,7 @@ function IQ(A, I) {
 function gQ(A, I) {
   var C = Jg(A + "");
   if (arguments.length < 2) {
-    for (var B = eI(this.node()), i = -1, o = C.length; ++i < o; ) if (!B.contains(C[i])) return !1;
+    for (var B = ZI(this.node()), i = -1, o = C.length; ++i < o; ) if (!B.contains(C[i])) return !1;
     return !0;
   }
   return this.each((typeof I == "function" ? IQ : I ? $C : AQ)(C, I));
@@ -1885,7 +1885,7 @@ function FQ() {
   return null;
 }
 function yQ(A, I) {
-  var C = typeof A == "function" ? A : dI(A), B = I == null ? FQ : typeof I == "function" ? I : ZI(I);
+  var C = typeof A == "function" ? A : dI(A), B = I == null ? FQ : typeof I == "function" ? I : eI(I);
   return this.select(function() {
     return this.insertBefore(C.apply(this, arguments), B.apply(this, arguments) || null);
   });
@@ -1989,7 +1989,7 @@ function gA(A, I) {
 function VA() {
   return new gA([[document.documentElement]], lI);
 }
-function ZQ() {
+function eQ() {
   return this;
 }
 gA.prototype = VA.prototype = {
@@ -2004,12 +2004,12 @@ gA.prototype = VA.prototype = {
   exit: YC,
   join: JC,
   merge: HC,
-  selection: ZQ,
+  selection: eQ,
   order: tC,
   sort: rC,
   call: dC,
-  nodes: ZC,
-  node: eC,
+  nodes: eC,
+  node: ZC,
   size: lC,
   empty: qC,
   each: xC,
@@ -2036,13 +2036,13 @@ function b(A) {
 function _I(A) {
   return b(dI(A).call(document.documentElement));
 }
-function eQ(A) {
+function ZQ(A) {
   let I;
   for (; I = A.sourceEvent; ) A = I;
   return A;
 }
 function UA(A, I) {
-  if (A = eQ(A), I === void 0 && (I = A.currentTarget), I) {
+  if (A = ZQ(A), I === void 0 && (I = A.currentTarget), I) {
     var C = I.ownerSVGElement || I;
     if (C.createSVGPoint) {
       var B = C.createSVGPoint();
@@ -2254,7 +2254,7 @@ function pQ() {
   return this.rgb().formatHex8();
 }
 function PQ() {
-  return Zg(this).formatHsl();
+  return eg(this).formatHsl();
 }
 function Ig() {
   return this.rgb().formatRgb();
@@ -2323,7 +2323,7 @@ function cA(A) {
 function Bg(A, I, C, B) {
   return B <= 0 ? A = I = C = NaN : C <= 0 || C >= 1 ? A = I = NaN : I <= 0 && (A = NaN), new GA(A, I, C, B);
 }
-function Zg(A) {
+function eg(A) {
   if (A instanceof GA) return new GA(A.h, A.s, A.l, A.opacity);
   if (A instanceof vA || (A = fA(A)), !A) return new GA();
   if (A instanceof GA) return A;
@@ -2332,7 +2332,7 @@ function Zg(A) {
   return M ? (I === o ? G = (C - B) / M + (C < B) * 6 : C === o ? G = (B - I) / M + 2 : G = (I - C) / M + 4, M /= s < 0.5 ? o + i : 2 - o - i, G *= 60) : M = s > 0 && s < 1 ? 0 : G, new GA(G, M, s, A.opacity);
 }
 function TQ(A, I, C, B) {
-  return arguments.length === 1 ? Zg(A) : new GA(A, I, C, B ?? 1);
+  return arguments.length === 1 ? eg(A) : new GA(A, I, C, B ?? 1);
 }
 function GA(A, I, C, B) {
   this.h = +A, this.s = +I, this.l = +C, this.opacity = +B;
@@ -2373,7 +2373,7 @@ function TA(A) {
 function FI(A, I, C) {
   return (A < 60 ? I + (C - I) * A / 60 : A < 180 ? C : A < 240 ? I + (C - I) * (240 - A) / 60 : I) * 255;
 }
-const eg = (A) => () => A;
+const Zg = (A) => () => A;
 function XQ(A, I) {
   return function(C) {
     return A + C * I;
@@ -2386,12 +2386,12 @@ function jQ(A, I, C) {
 }
 function _Q(A) {
   return (A = +A) == 1 ? lg : function(I, C) {
-    return C - I ? jQ(I, C, A) : eg(isNaN(I) ? C : I);
+    return C - I ? jQ(I, C, A) : Zg(isNaN(I) ? C : I);
   };
 }
 function lg(A, I) {
   var C = I - A;
-  return C ? XQ(A, C) : eg(isNaN(A) ? I : A);
+  return C ? XQ(A, C) : Zg(isNaN(A) ? I : A);
 }
 const Dg = (function A(I) {
   var C = _Q(I);
@@ -2507,13 +2507,13 @@ const oB = (function A(I, C, B) {
         ];
       };
     else {
-      var V = Math.sqrt(W), f = (U * U - F * F + B * W) / (2 * F * C * V), $ = (U * U - F * F - B * W) / (2 * U * C * V), e = Math.log(Math.sqrt(f * f + 1) - f), j = Math.log(Math.sqrt($ * $ + 1) - $);
-      n = (j - e) / I, P = function(X) {
-        var RA = X * n, QA = og(e), iA = F / (C * V) * (QA * iB(I * RA + e) - DB(e));
+      var V = Math.sqrt(W), O = (U * U - F * F + B * W) / (2 * F * C * V), $ = (U * U - F * F - B * W) / (2 * U * C * V), Z = Math.log(Math.sqrt(O * O + 1) - O), j = Math.log(Math.sqrt($ * $ + 1) - $);
+      n = (j - Z) / I, P = function(X) {
+        var RA = X * n, QA = og(Z), iA = F / (C * V) * (QA * iB(I * RA + Z) - DB(Z));
         return [
           M + iA * Y,
           s + iA * x,
-          F * QA / og(I * RA + e)
+          F * QA / og(I * RA + Z)
         ];
       };
     }
@@ -2805,19 +2805,19 @@ function dB(A, I) {
   var B = GI(A);
   return this.tween(C, (B.local ? rB : nB)(B, I));
 }
-function ZB(A, I) {
+function eB(A, I) {
   return function() {
     WI(this, A).delay = +I.apply(this, arguments);
   };
 }
-function eB(A, I) {
+function ZB(A, I) {
   return I = +I, function() {
     WI(this, A).delay = I;
   };
 }
 function lB(A) {
   var I = this._id;
-  return arguments.length ? this.each((typeof A == "function" ? ZB : eB)(I, A)) : MA(this.node(), I).delay;
+  return arguments.length ? this.each((typeof A == "function" ? eB : ZB)(I, A)) : MA(this.node(), I).delay;
 }
 function qB(A, I) {
   return function() {
@@ -2899,7 +2899,7 @@ function TB() {
 }
 function XB(A) {
   var I = this._name, C = this._id;
-  typeof A != "function" && (A = ZI(A));
+  typeof A != "function" && (A = eI(A));
   for (var B = this._groups, i = B.length, o = new Array(i), G = 0; G < i; ++G)
     for (var M = B[G], s = M.length, F = o[G] = new Array(s), y, S, U = 0; U < s; ++U)
       (y = M[U]) && (S = A.call(y, y.__data__, U, M)) && ("__data__" in y && (S.__data__ = y.__data__), F[U] = S, RI(F[U], I, C, U, F, MA(y, C)));
@@ -3163,7 +3163,7 @@ NA.prototype;
 function NI(A) {
   A.stopImmediatePropagation();
 }
-function ZA(A) {
+function eA(A) {
   A.preventDefault(), A.stopImmediatePropagation();
 }
 function cE(A) {
@@ -3196,7 +3196,7 @@ function JE() {
   }
   n.transform = function(k, c, L, E) {
     var J = k.selection ? k.selection() : k;
-    J.property("__zoom", sg), k !== J ? e(k, c, L, E) : J.interrupt().each(function() {
+    J.property("__zoom", sg), k !== J ? Z(k, c, L, E) : J.interrupt().each(function() {
       j(this, arguments).event(E).start().zoom(null, typeof c == "function" ? c.apply(this, arguments) : c).end();
     });
   }, n.scaleBy = function(k, c, L, E) {
@@ -3207,7 +3207,7 @@ function JE() {
   }, n.scaleTo = function(k, c, L, E) {
     n.transform(k, function() {
       var J = I.apply(this, arguments), q = this.__zoom, l = L == null ? $(J) : typeof L == "function" ? L.apply(this, arguments) : L, v = q.invert(l), z = typeof c == "function" ? c.apply(this, arguments) : c;
-      return C(f(V(q, z), l, v), J, G);
+      return C(O(V(q, z), l, v), J, G);
     }, L, E);
   }, n.translateBy = function(k, c, L, E) {
     n.transform(k, function() {
@@ -3228,14 +3228,14 @@ function JE() {
   function V(k, c) {
     return c = Math.max(o[0], Math.min(o[1], c)), c === k.k ? k : new NA(c, k.x, k.y);
   }
-  function f(k, c, L) {
+  function O(k, c, L) {
     var E = c[0] - L[0] * k.k, J = c[1] - L[1] * k.k;
     return E === k.x && J === k.y ? k : new NA(k.k, E, J);
   }
   function $(k) {
     return [(+k[0][0] + +k[1][0]) / 2, (+k[0][1] + +k[1][1]) / 2];
   }
-  function e(k, c, L, E) {
+  function Z(k, c, L, E) {
     k.on("start.zoom", function() {
       j(this, arguments).event(E).start();
     }).on("interrupt.zoom end.zoom", function() {
@@ -3295,7 +3295,7 @@ function JE() {
       if (E.k === J) return;
       L.mouse = [q, E.invert(q)], QI(this), L.start();
     }
-    ZA(k), L.wheel = setTimeout(l, x), L.zoom("mouse", C(f(V(E, J), L.mouse[0], L.mouse[1]), L.extent, G));
+    eA(k), L.wheel = setTimeout(l, x), L.zoom("mouse", C(O(V(E, J), L.mouse[0], L.mouse[1]), L.extent, G));
     function l() {
       L.wheel = null, L.end();
     }
@@ -3305,20 +3305,20 @@ function JE() {
     var L = k.currentTarget, E = j(this, c, !0).event(k), J = b(k.view).on("mousemove.zoom", z, !0).on("mouseup.zoom", IA, !0), q = UA(k, L), l = k.clientX, v = k.clientY;
     qQ(k.view), NI(k), E.mouse = [q, this.__zoom.invert(q)], QI(this), E.start();
     function z(u) {
-      if (ZA(u), !E.moved) {
+      if (eA(u), !E.moved) {
         var BA = u.clientX - l, EA = u.clientY - v;
         E.moved = BA * BA + EA * EA > W;
       }
-      E.event(u).zoom("mouse", C(f(E.that.__zoom, E.mouse[0] = UA(u, L), E.mouse[1]), E.extent, G));
+      E.event(u).zoom("mouse", C(O(E.that.__zoom, E.mouse[0] = UA(u, L), E.mouse[1]), E.extent, G));
     }
     function IA(u) {
-      J.on("mousemove.zoom mouseup.zoom", null), xQ(u.view, E.moved), ZA(u), E.event(u).end();
+      J.on("mousemove.zoom mouseup.zoom", null), xQ(u.view, E.moved), eA(u), E.event(u).end();
     }
   }
   function iA(k, ...c) {
     if (A.apply(this, arguments)) {
-      var L = this.__zoom, E = UA(k.changedTouches ? k.changedTouches[0] : k, this), J = L.invert(E), q = L.k * (k.shiftKey ? 0.5 : 2), l = C(f(V(L, q), E, J), I.apply(this, c), G);
-      ZA(k), M > 0 ? b(this).transition().duration(M).call(e, l, E, k) : b(this).call(n.transform, l, E, k);
+      var L = this.__zoom, E = UA(k.changedTouches ? k.changedTouches[0] : k, this), J = L.invert(E), q = L.k * (k.shiftKey ? 0.5 : 2), l = C(O(V(L, q), E, J), I.apply(this, c), G);
+      eA(k), M > 0 ? b(this).transition().duration(M).call(Z, l, E, k) : b(this).call(n.transform, l, E, k);
     }
   }
   function pA(k, ...c) {
@@ -3334,14 +3334,14 @@ function JE() {
   function FA(k, ...c) {
     if (this.__zooming) {
       var L = j(this, c).event(k), E = k.changedTouches, J = E.length, q, l, v, z;
-      for (ZA(k), q = 0; q < J; ++q)
+      for (eA(k), q = 0; q < J; ++q)
         l = E[q], v = UA(l, this), L.touch0 && L.touch0[2] === l.identifier ? L.touch0[0] = v : L.touch1 && L.touch1[2] === l.identifier && (L.touch1[0] = v);
       if (l = L.that.__zoom, L.touch1) {
         var IA = L.touch0[0], u = L.touch0[1], BA = L.touch1[0], EA = L.touch1[1], AA = (AA = BA[0] - IA[0]) * AA + (AA = BA[1] - IA[1]) * AA, oA = (oA = EA[0] - u[0]) * oA + (oA = EA[1] - u[1]) * oA;
         l = V(l, Math.sqrt(AA / oA)), v = [(IA[0] + BA[0]) / 2, (IA[1] + BA[1]) / 2], z = [(u[0] + EA[0]) / 2, (u[1] + EA[1]) / 2];
       } else if (L.touch0) v = L.touch0[0], z = L.touch0[1];
       else return;
-      L.zoom("touch", C(f(l, v, z), L.extent, G));
+      L.zoom("touch", C(O(l, v, z), L.extent, G));
     }
   }
   function PA(k, ...c) {
@@ -3427,14 +3427,14 @@ function hg(A, { c: I, rx: C, ry: B }) {
   if (!(x < dE))
     return x;
 }
-function ZE(A) {
+function eE(A) {
   return { x: A.x + A.width / 2, y: A.y + A.height / 2 };
 }
 function Fg(A, { c: I, rx: C, ry: B }) {
   const i = WA(A, I), o = Math.atan2(i.y, i.x), G = Math.cos(o), M = Math.sin(o), s = C * B / Math.sqrt(B * B * G * G + C * C * M * M), F = s * G, y = s * M;
   return mI({ x: F, y }, I);
 }
-function eE(A) {
+function ZE(A) {
   return [
     rI(A.start, A.control1),
     rI(A.control2, A.end)
@@ -3484,14 +3484,14 @@ function WE(A, I) {
 class bE {
   //extract abbreviations
   constructor(I, C) {
-    O(this, "nodes");
-    O(this, "edges");
-    O(this, "adj");
-    O(this, "abbrev", {
+    f(this, "nodes");
+    f(this, "edges");
+    f(this, "adj");
+    f(this, "abbrev", {
       abbreviations: {}
     });
     // table uses elementId as key to lookup (node/edge)Id
-    O(this, "reverseLookup", {
+    f(this, "reverseLookup", {
       nodes: {},
       edges: {}
     });
@@ -3565,7 +3565,7 @@ class bE {
     return C;
   }
 }
-const mE = 0.99, fE = 7, eA = 10, lA = fE / 2, OE = 30;
+const mE = 2, fE = 7, ZA = 10, lA = fE / 2, OE = 30;
 function yg(A) {
   const I = b(A);
   return {
@@ -3615,33 +3615,33 @@ class PE extends HTMLElement {
      * Passed in as attribute `dotsrc`  which can be either:
      * - A path to the dot file in the public folder during development
      * - A location that serves the dot file during production */
-    O(this, "dotSrc");
-    O(this, "dotSrcParams");
-    O(this, "checkDotSrcParamChangeInterval");
-    O(this, "json");
-    O(this, "graph");
+    f(this, "dotSrc");
+    f(this, "dotSrcParams");
+    f(this, "checkDotSrcParamChangeInterval");
+    f(this, "json");
+    f(this, "graph");
     /** Root <svg> element */
-    O(this, "svg");
+    f(this, "svg");
     /** The direct descendant <g> element of <svg> element, container of the whole graph*/
-    O(this, "svgg");
-    O(this, "initTransform");
-    O(this, "zoomLevel", "ZoomIn");
+    f(this, "svgg");
+    f(this, "initTransform");
+    f(this, "zoomLevel", "ZoomIn");
     // the graph always starts with most detailed zoom
     // here stores nodes and edges that should be rendered based on current zoom level
-    O(this, "minimizableObjects", {
+    f(this, "minimizableObjects", {
       edges: {},
       nodes: {}
     });
-    O(this, "highlightConnections", {
+    f(this, "highlightConnections", {
       nodes: [],
       edges: []
     });
-    O(this, "resizeObserver");
+    f(this, "resizeObserver");
     /** Render the graph as SVG given dot graph definition
      * 
      * @param dotString The dot graph definition (usually saved as a `*.dot` file and start with "digraph" in our case)
      */
-    O(this, "render", (C) => {
+    f(this, "render", (C) => {
       this.checkDotSrcParamChangeInterval !== void 0 && clearInterval(this.checkDotSrcParamChangeInterval), $g().then((B) => {
         var G;
         this.innerHTML = "", this.svg = void 0, this.svgg = null, this.highlightConnections = { nodes: [], edges: [] }, this.minimizableObjects = {
@@ -3654,8 +3654,8 @@ class PE extends HTMLElement {
         if (!i || i.type !== SVGTransform.SVG_TRANSFORM_TRANSLATE)
           throw Error("Second Initial Transform on graph is not Translation");
         this.initTransform = `translate(${i.matrix.e} ${i.matrix.f})`;
-        const o = JE().scaleExtent([0.5, 3]).on("zoom", this.handleZoom);
-        b(this.svg).call(o);
+        const o = JE().scaleExtent([0, 1 / 0]).on("zoom", this.handleZoom);
+        b(this.svg).call(o), this.handleAbstractionLevel();
         for (const M of Object.values(this.graph.nodes))
           b(this.svgg).selectChild("#" + M.elementId).classed("clickable", !0).on("click", this.handleNodeClick);
         if (document.addEventListener("click", (M) => {
@@ -3691,7 +3691,7 @@ class PE extends HTMLElement {
     /*
       Fetchs the dot graph string  
     */
-    O(this, "fetchDotString", (C) => {
+    f(this, "fetchDotString", (C) => {
       const { promise: B, resolve: i, reject: o } = Promise.withResolvers();
       return fetch(C).then((G) => {
         if (!G.ok) {
@@ -3707,7 +3707,7 @@ class PE extends HTMLElement {
         }).catch((M) => o(M));
       }).catch((G) => o(G)), B;
     });
-    O(this, "constructMinimizableObjects", () => {
+    f(this, "constructMinimizableObjects", () => {
       if (!(!this.graph || !this.svgg)) {
         for (const [C, B] of Object.entries(this.graph.nodes))
           if (B.minimizable) {
@@ -3719,19 +3719,19 @@ class PE extends HTMLElement {
           }
       }
     });
-    O(this, "minimizeNode", (C) => {
-      const B = ZE(C.getBBox()), i = VE(C), o = _I("svg:g").attr("id", C.getAttribute("id")).attr("class", "node clickable mini").on("click", this.handleNodeClick);
+    f(this, "minimizeNode", (C) => {
+      const B = eE(C.getBBox()), i = VE(C), o = _I("svg:g").attr("id", C.getAttribute("id")).attr("class", "node clickable mini").on("click", this.handleNodeClick);
       o.append("title").text(vE(C));
       const G = b(C).selectChild("polygon"), M = G.node().getBBox();
       o.append("polygon").attr("points", G.attr("points")).attr("fill", G.attr("fill")).attr("stroke", G.attr("stroke"));
       const s = i.text ? i.text.indexOf("[") >= 0 ? i.text.slice(0, i.text.indexOf("[")) + "" : i.text : "default";
       return o.append("text").attr("x", B.x).attr("y", B.y).attr("text-anchor", "middle").attr("alignment-baseline", "middle").attr("font-family", i.fontFamily).attr("font-size", `${Math.min(OE, Math.min(M.width / s.length / 0.54, M.height * 0.8)).toFixed(0)}px`).text(s), o.node();
     });
-    O(this, "minimizeEdge", (C, B, i) => {
-      const o = b(C), G = o.selectChild("path"), M = o.selectChild("polygon"), s = M.attr("stroke-width") === null ? 1 : Number(M.attr("stroke-width")), F = Math.sqrt(lA * lA + eA * eA) / lA * (s / 2), y = eA + F + s / 2, S = _I("svg:g").attr("id", o.attr("id")).attr("class", "edge mini");
+    f(this, "minimizeEdge", (C, B, i) => {
+      const o = b(C), G = o.selectChild("path"), M = o.selectChild("polygon"), s = M.attr("stroke-width") === null ? 1 : Number(M.attr("stroke-width")), F = Math.sqrt(lA * lA + ZA * ZA) / lA * (s / 2), y = ZA + F + s / 2, S = _I("svg:g").attr("id", o.attr("id")).attr("class", "edge mini");
       S.append("title");
       let U = G.attr("d");
-      const Y = qE(U), [x, W] = eE(Y);
+      const Y = qE(U), [x, W] = ZE(Y);
       if (B) {
         const P = yg(b(B).selectChild("ellipse").node()), n = {
           o: Y.start,
@@ -3740,8 +3740,8 @@ class PE extends HTMLElement {
         if (V)
           U = $A(U, _A(n, V));
         else {
-          const f = Fg(Y.start, P);
-          U = $A(U, f);
+          const O = Fg(Y.start, P);
+          U = $A(U, O);
         }
       }
       if (i) {
@@ -3749,20 +3749,20 @@ class PE extends HTMLElement {
           o: Y.end,
           d: W
         }, V = hg(n, P);
-        let f, $;
+        let O, $;
         if (V)
-          U = $A(U, void 0, _A(n, V - y)), f = _A(n, V), $ = tI(n.d);
+          U = $A(U, void 0, _A(n, V - y)), O = _A(n, V), $ = tI(n.d);
         else {
           const QA = Fg(Y.end, P);
-          f = QA;
+          O = QA;
           const iA = {
             o: QA,
             d: rI(QA, Y.end)
           };
           $ = iA.d, U = $A(U, void 0, _A(iA, y));
         }
-        const e = (tE({ x: 0, y: -1 }, $) > 0 ? 1 : -1) * Math.acos(HE($, { x: 0, y: -1 })) * 180 / Math.PI, j = WA(f, { x: 0, y: F }), X = WA(j, { x: -lA, y: eA }), RA = WA(j, { x: lA, y: eA });
-        S.append("path").attr("d", `M${YA(RA)}L${YA(j)}L${YA(X)}Z`).attr("fill", M.attr("fill")).attr("stroke", M.attr("stroke")).attr("stroke-width", M.attr("stroke-width")).attr("transform", `rotate(${e},${YA(f)})`);
+        const Z = (tE({ x: 0, y: -1 }, $) > 0 ? 1 : -1) * Math.acos(HE($, { x: 0, y: -1 })) * 180 / Math.PI, j = WA(O, { x: 0, y: F }), X = WA(j, { x: -lA, y: ZA }), RA = WA(j, { x: lA, y: ZA });
+        S.append("path").attr("d", `M${YA(RA)}L${YA(j)}L${YA(X)}Z`).attr("fill", M.attr("fill")).attr("stroke", M.attr("stroke")).attr("stroke-width", M.attr("stroke-width")).attr("transform", `rotate(${Z},${YA(O)})`);
       } else
         S.append("polygon").attr("points", M.attr("points")).attr("fill", M.attr("fill")).attr("stroke", M.attr("stroke")).attr("stroke-width", M.attr("stroke-width"));
       return S.append("path").attr("d", U).attr("fill", G.attr("fill")).attr("stroke", G.attr("stroke")).attr("stroke-width", G.attr("stroke-width")).attr("stroke-dasharray", G.attr("stroke-dasharray")), S.node();
@@ -3770,25 +3770,28 @@ class PE extends HTMLElement {
     /*
       Responsible for handling zoom events for the graph
     */
-    O(this, "handleZoom", (C) => {
+    f(this, "handleZoom", (C) => {
+      this.svgg && (b(this.svgg).attr("transform", C.transform.toString() + " " + this.initTransform), this.handleAbstractionLevel());
+    });
+    f(this, "handleAbstractionLevel", () => {
+      var i;
       if (!this.svgg)
         return;
-      b(this.svgg).attr("transform", C.transform.toString() + " " + this.initTransform);
-      const B = C.transform.k > mE ? "ZoomIn" : "ZoomOut";
-      if (B === this.zoomLevel)
+      const C = (((i = this.svgg.getCTM()) == null ? void 0 : i.a) ?? 0) > mE ? "ZoomIn" : "ZoomOut";
+      if (C === this.zoomLevel)
         return;
-      const i = this.zoomLevel;
-      this.zoomLevel = B;
+      const B = this.zoomLevel;
+      this.zoomLevel = C;
       for (const [o, G] of Object.entries(this.minimizableObjects.edges))
-        i && b(G[i]).remove(), G[B] && this.svgg.appendChild(G[B]);
+        B && b(G[B]).remove(), G[C] && this.svgg.appendChild(G[C]);
       for (const [o, G] of Object.entries(this.minimizableObjects.nodes))
-        i && b(G[i]).remove(), G[B] && this.svgg.appendChild(G[B]);
+        B && b(G[B]).remove(), G[C] && this.svgg.appendChild(G[C]);
       this.highlight();
     });
     /*
       When a node is clicked, all the downward connections (including the edges) of the node are highlighted.
     */
-    O(this, "handleNodeClick", (C) => {
+    f(this, "handleNodeClick", (C) => {
       if (!this.graph)
         return;
       const B = b(C.currentTarget).attr("id");
@@ -3797,7 +3800,7 @@ class PE extends HTMLElement {
     /*
       When an abbreviation is clicked in the table, all graph nodes containing that abbreviation are highlighted. 
     */
-    O(this, "handleAbbreviationTextClick", (C) => {
+    f(this, "handleAbbreviationTextClick", (C) => {
       if (!this.graph)
         return;
       const i = C.target.textContent ?? "";
@@ -3806,7 +3809,7 @@ class PE extends HTMLElement {
         edges: []
       }, this.highlight();
     });
-    O(this, "highlight", () => {
+    f(this, "highlight", () => {
       if (!(!this.graph || !this.svgg || !this.highlightConnections || this.highlightConnections.nodes.length === 0 && this.highlightConnections.edges.length === 0)) {
         this.clearHighlight(), b(this.svgg).classed("highlighted", !0);
         for (const C of this.highlightConnections.nodes)
@@ -3818,12 +3821,12 @@ class PE extends HTMLElement {
     /*
       Clear the highlighted edges and nodes of the graph
     */
-    O(this, "clearHighlight", () => {
+    f(this, "clearHighlight", () => {
       if (!this.svgg)
         return;
       b(this.svgg).classed("highlighted", !1).selectChildren("g.active").classed("active", !1);
     });
-    O(this, "getNodeSelector", () => {
+    f(this, "getNodeSelector", () => {
       var C;
       return Object.values(((C = this.graph) == null ? void 0 : C.nodes) ?? {}).map((B) => "#" + B.elementId).join(",");
     });
