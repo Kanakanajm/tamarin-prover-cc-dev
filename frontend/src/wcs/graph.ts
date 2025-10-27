@@ -6,7 +6,7 @@ import { VizGraph } from "../viz";
 import { DiGraph, DiGraphConnections } from "../digraph";
 import './graph.css';
 
-const ZOOM_LEVEL_THRESHOLD = 0.99;
+const ZOOM_LEVEL_THRESHOLD = 2; // how many pixels are covered by one unit in user coordinate
 const ARROW_HEAD_WIDTH = 7;
 const ARROW_HEAD_HEIGHT = 10;
 const ARROW_HEAD_HALF_WIDTH = ARROW_HEAD_WIDTH / 2;
@@ -248,9 +248,11 @@ export class DotGraphViz extends HTMLElement {
       this.initTransform = `translate(${translate.matrix.e} ${translate.matrix.f})`;
 
       // create zoom behavior
-      const zoomBehavior = zoom<SVGSVGElement, unknown>().scaleExtent([0.5, 3]).on("zoom", this.handleZoom)
+      const zoomBehavior = zoom<SVGSVGElement, unknown>().scaleExtent([0, Infinity]).on("zoom", this.handleZoom)
       // register zoom behavior
       select(this.svg).call(zoomBehavior);
+
+      this.handleAbstractionLevel();
 
       // register onclick highlight event
       for (const node of Object.values(this.graph.nodes)) {
@@ -544,10 +546,17 @@ export class DotGraphViz extends HTMLElement {
     if (!this.svgg)
       return;
 
-    // attach the zoom transform after the initial translation
+    // scale the graph: attach the zoom transform after the initial translation
     select(this.svgg).attr("transform", event.transform.toString() + " " + this.initTransform);
+    this.handleAbstractionLevel();
+  };
 
-    const zoomLevel = event.transform.k > ZOOM_LEVEL_THRESHOLD ? "ZoomIn" : "ZoomOut";
+  handleAbstractionLevel = () => {
+    if (!this.svgg)
+      return;
+
+    // abstraction/zoom level is determined by how much pixel that 1 unit in user coordinate covers
+    const zoomLevel = (this.svgg.getCTM()?.a ?? 0) > ZOOM_LEVEL_THRESHOLD ? "ZoomIn" : "ZoomOut";
 
     // do nothing when zoom level didn't change
     if (zoomLevel === this.zoomLevel)
@@ -583,7 +592,7 @@ export class DotGraphViz extends HTMLElement {
 
     // keep highlight state
     this.highlight();
-  };
+  }
 
   /*
     When a node is clicked, all the downward connections (including the edges) of the node are highlighted.
