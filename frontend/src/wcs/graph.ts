@@ -141,14 +141,29 @@ export class DotGraphViz extends HTMLElement {
 
   repositionAbbreviationTable() {
     const svg = select(this).selectChild<SVGSVGElement>("svg");
+    if (svg.empty()) {
+      return;
+    }
+    const svgEl = svg.node()!;
+
+    const scaleX = svgEl.clientWidth / svgEl.viewBox.baseVal.width;
+    const scaleY = svgEl.clientHeight / svgEl.viewBox.baseVal.height;
+    const scaleUniform = Math.min(scaleX, scaleY);
+
+    const midXViewBox = svgEl.viewBox.baseVal.x + svgEl.viewBox.baseVal.width / 2;
+    const midYViewBox = svgEl.viewBox.baseVal.y + svgEl.viewBox.baseVal.height / 2;
+
+    const midXViewBoxScaled = midXViewBox * scaleUniform;
+    const midYViewBoxScaled = midYViewBox * scaleUniform;
+
+    const translateX = svgEl.clientWidth / 2 - midXViewBoxScaled;
+    const translateY = svgEl.clientHeight / 2 - midYViewBoxScaled;
+
     const tbl = svg.selectChild<SVGGElement>("g.abbrev-table");
-    if (svg.size() === 1 && tbl.size() === 1) {
-        // transform matrix from screen coordinate to user coordinate
-        const m = svg.node()!.getCTM()?.inverse();
-        // bottom right corner of the svg container in screen coordinate
-        const pt_br_screen = new DOMPoint(svg.node()!.clientWidth, svg.node()!.clientHeight);
+    if (tbl.size() === 1) {
         // bottom right corner of the svg container in user coordinate
-        const pt_br_user = pt_br_screen.matrixTransform(m);
+        const x_br_screen = (svgEl.clientWidth - translateX) / scaleUniform;
+        const y_br_screen = (svgEl.clientHeight - translateY) / scaleUniform;
 
         // bounding box of abbreviation table
         const abbrevTblElBBox = tbl.node()!.getBBox();
@@ -157,7 +172,7 @@ export class DotGraphViz extends HTMLElement {
         // then translate to the bottom right corner of the svg container with 10 unit of margin
         tbl
           .attr("transform", `translate(${-abbrevTblElBBox.x} ${-abbrevTblElBBox.y}) ` 
-            + `translate(${pt_br_user.x - abbrevTblElBBox.width - 10} ${pt_br_user.y - abbrevTblElBBox.height - 10})`
+            + `translate(${x_br_screen - abbrevTblElBBox.width - 10} ${y_br_screen - abbrevTblElBBox.height - 10})`
           );
     }
   }
