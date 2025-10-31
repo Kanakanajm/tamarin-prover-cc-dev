@@ -141,40 +141,56 @@ export class DotGraphViz extends HTMLElement {
 
   repositionAbbreviationTable() {
     const svg = select(this).selectChild<SVGSVGElement>("svg");
-    if (svg.empty()) {
+    const tbl = svg.selectChild<SVGGElement>("g.abbrev-table");
+    if (svg.empty() || tbl.empty()) {
       return;
     }
+    // skip null check due to the condition above
     const svgEl = svg.node()!;
+    const tblEl = tbl.node()!;
 
+    // variables for transforming screen -> user coords
+    // scaling factor = screen/user coord i.e. how much screen pixel is covered by 1 unit in user coord
     const scaleX = svgEl.clientWidth / svgEl.viewBox.baseVal.width;
     const scaleY = svgEl.clientHeight / svgEl.viewBox.baseVal.height;
+    // default preserveAspectRatio is xMidYMid meet which forces uniform scaling
+    // see https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/preserveAspectRatio
     const scaleUniform = Math.min(scaleX, scaleY);
 
+    // calculate viewbox translation
+    // mid point of the viewBox
     const midXViewBox = svgEl.viewBox.baseVal.x + svgEl.viewBox.baseVal.width / 2;
     const midYViewBox = svgEl.viewBox.baseVal.y + svgEl.viewBox.baseVal.height / 2;
 
+    // mid point of the viewBox after scaling (to screen/viewport)
     const midXViewBoxScaled = midXViewBox * scaleUniform;
     const midYViewBoxScaled = midYViewBox * scaleUniform;
 
+    // how much from the svg container's mid point to the viewBox's mid point
     const translateX = svgEl.clientWidth / 2 - midXViewBoxScaled;
     const translateY = svgEl.clientHeight / 2 - midYViewBoxScaled;
 
-    const tbl = svg.selectChild<SVGGElement>("g.abbrev-table");
-    if (tbl.size() === 1) {
-        // bottom right corner of the svg container in user coordinate
-        const x_br_screen = (svgEl.clientWidth - translateX) / scaleUniform;
-        const y_br_screen = (svgEl.clientHeight - translateY) / scaleUniform;
+    // target font size on screen: 12px, default legend text font size in svg: 8 px
+    // target_size = svg_size * scale_zoom * scale_viewport => scale_zoom = target_size / (svg_size * scale_viewport)
+    // scaleFont = 12 px / (8 px * scaleUniform)
+    const scaleFont = 1.5 / scaleUniform;
 
-        // bounding box of abbreviation table
-        const abbrevTblElBBox = tbl.node()!.getBBox();
+    // bottom right corner of the svg container in user coordinate with 10px of margin
+    const x_br_screen = (svgEl.clientWidth - 10 - translateX) / scaleUniform;
+    const y_br_screen = (svgEl.clientHeight - 10 - translateY) / scaleUniform;
+        
+    // bounding box of abbreviation table
+    const abbrevTblElBBox = tblEl.getBBox();
 
-        // first translate the abbreviation box (top-left corner) to origin
-        // then translate to the bottom right corner of the svg container with 10 unit of margin
-        tbl
-          .attr("transform", `translate(${-abbrevTblElBBox.x} ${-abbrevTblElBBox.y}) ` 
-            + `translate(${x_br_screen - abbrevTblElBBox.width - 10} ${y_br_screen - abbrevTblElBBox.height - 10})`
-          );
-    }
+    // first translate the abbreviation box (top-left corner) to origin
+    // then scale the box so that the text has a font size equivalent on screen
+    // finally translate to the bottom right corner of the svg container with 10px of margin
+    // Note that translation applies to the top-left corner, 
+    // a translation from bottom-right to top-left is given by (box_width, box_height).
+    tbl
+      .attr("transform", `translate(${x_br_screen - abbrevTblElBBox.width * scaleFont} ${y_br_screen - abbrevTblElBBox.height * scaleFont}) ` 
+        + `scale(${scaleFont}) translate(${-abbrevTblElBBox.x} ${-abbrevTblElBBox.y})`
+      ); 
   }
 
   // attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null) {
