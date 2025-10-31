@@ -6,7 +6,6 @@ import { VizGraph } from "../viz";
 import { DiGraph, DiGraphConnections } from "../digraph";
 import './graph.css';
 
-const ZOOM_LEVEL_THRESHOLD = 2; // how many pixels are covered by one unit in user coordinate
 const ARROW_HEAD_WIDTH = 7;
 const ARROW_HEAD_HEIGHT = 10;
 const ARROW_HEAD_HALF_WIDTH = ARROW_HEAD_WIDTH / 2;
@@ -216,6 +215,7 @@ export class DotGraphViz extends HTMLElement {
     this.resizeObserver = new ResizeObserver(entries => {
       for (const _ of entries) {
         this.repositionAbbreviationTable();
+        this.handleAbstractionLevel();
       }
     });
 
@@ -583,11 +583,16 @@ export class DotGraphViz extends HTMLElement {
   };
 
   handleAbstractionLevel = () => {
-    if (!this.svgg)
+    if (!this.svgg || !this.svgg.getCTM())
       return;
 
-    // abstraction/zoom level is determined by how much pixel that 1 unit in user coordinate covers
-    const zoomLevel = (this.svgg.getCTM()?.a ?? 0) > ZOOM_LEVEL_THRESHOLD ? "ZoomIn" : "ZoomOut";
+    // screen_font_size = scale_zoom * scale_viewport * svg_font_size (default = 8px)
+    // Note that here getCTM().a (which equals to getCTM().d) gives scale_zoom * scale_viewport due to forced uniform scaling
+    // see https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/preserveAspectRatio
+    const screen_fs = (this.svgg.getCTM()!).a * 8;
+
+    // 12px is a threshold for determining showing detail view or abstract view
+    const zoomLevel = screen_fs >= 12 ? "ZoomIn" : "ZoomOut";
 
     // do nothing when zoom level didn't change
     if (zoomLevel === this.zoomLevel)

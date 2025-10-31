@@ -3565,7 +3565,7 @@ class bE {
     return C;
   }
 }
-const mE = 2, fE = 7, ZA = 10, lA = fE / 2, OE = 30;
+const mE = 7, ZA = 10, lA = mE / 2, fE = 30;
 function yg(A) {
   const I = m(A);
   return {
@@ -3577,7 +3577,7 @@ function yg(A) {
     ry: Number(I.attr("ry"))
   };
 }
-function VE(A) {
+function OE(A) {
   const I = m(A).selectChildren("text").filter(function() {
     var C;
     return ((C = this.textContent) == null ? void 0 : C.startsWith("#")) ?? !1;
@@ -3594,20 +3594,20 @@ function VE(A) {
     fontFamily: I.nodes()[0].getAttribute("font-family")
   };
 }
-function vE(A) {
+function VE(A) {
   return m(A).selectChild("title").text();
 }
-function pE() {
+function vE() {
   const A = "simplification=", I = document.cookie.indexOf(A);
   return I === -1 ? -1 : Number(document.cookie.charAt(I + A.length));
 }
 function Ng() {
   const A = new URLSearchParams();
   document.cookie.indexOf("abbreviate=") === -1 && A.append("unabbreviate", ""), document.cookie.indexOf("auto-sources=") === -1 && A.append("no-auto-sources", "");
-  const I = pE();
+  const I = vE();
   return I !== -1 && (I === 0 && (A.append("uncompact", ""), A.append("uncompress", "")), A.append("simplification", I.toString())), A.toString();
 }
-class PE extends HTMLElement {
+class pE extends HTMLElement {
   constructor() {
     super();
     /** The source URL of the dot graph definition 
@@ -3720,12 +3720,12 @@ class PE extends HTMLElement {
       }
     });
     O(this, "minimizeNode", (C) => {
-      const B = eE(C.getBBox()), i = VE(C), o = _I("svg:g").attr("id", C.getAttribute("id")).attr("class", "node clickable mini").on("click", this.handleNodeClick);
-      o.append("title").text(vE(C));
+      const B = eE(C.getBBox()), i = OE(C), o = _I("svg:g").attr("id", C.getAttribute("id")).attr("class", "node clickable mini").on("click", this.handleNodeClick);
+      o.append("title").text(VE(C));
       const G = m(C).selectChild("polygon"), M = G.node().getBBox();
       o.append("polygon").attr("points", G.attr("points")).attr("fill", G.attr("fill")).attr("stroke", G.attr("stroke"));
       const R = i.text ? i.text.indexOf("[") >= 0 ? i.text.slice(0, i.text.indexOf("[")) + "" : i.text : "default";
-      return o.append("text").attr("x", B.x).attr("y", B.y).attr("text-anchor", "middle").attr("alignment-baseline", "middle").attr("font-family", i.fontFamily).attr("font-size", `${Math.min(OE, Math.min(M.width / R.length / 0.54, M.height * 0.8)).toFixed(0)}px`).text(R), o.node();
+      return o.append("text").attr("x", B.x).attr("y", B.y).attr("text-anchor", "middle").attr("alignment-baseline", "middle").attr("font-family", i.fontFamily).attr("font-size", `${Math.min(fE, Math.min(M.width / R.length / 0.54, M.height * 0.8)).toFixed(0)}px`).text(R), o.node();
     });
     O(this, "minimizeEdge", (C, B, i) => {
       const o = m(C), G = o.selectChild("path"), M = o.selectChild("polygon"), R = M.attr("stroke-width") === null ? 1 : Number(M.attr("stroke-width")), F = Math.sqrt(lA * lA + ZA * ZA) / lA * (R / 2), y = ZA + F + R / 2, c = _I("svg:g").attr("id", o.attr("id")).attr("class", "edge mini");
@@ -3774,18 +3774,17 @@ class PE extends HTMLElement {
       this.svgg && (m(this.svgg).attr("transform", C.transform.toString() + " " + this.initTransform), this.handleAbstractionLevel());
     });
     O(this, "handleAbstractionLevel", () => {
-      var i;
-      if (!this.svgg)
+      if (!this.svgg || !this.svgg.getCTM())
         return;
-      const C = (((i = this.svgg.getCTM()) == null ? void 0 : i.a) ?? 0) > mE ? "ZoomIn" : "ZoomOut";
-      if (C === this.zoomLevel)
+      const B = this.svgg.getCTM().a * 8 >= 12 ? "ZoomIn" : "ZoomOut";
+      if (B === this.zoomLevel)
         return;
-      const B = this.zoomLevel;
-      this.zoomLevel = C;
+      const i = this.zoomLevel;
+      this.zoomLevel = B;
       for (const [o, G] of Object.entries(this.minimizableObjects.edges))
-        B && m(G[B]).remove(), G[C] && this.svgg.appendChild(G[C]);
+        i && m(G[i]).remove(), G[B] && this.svgg.appendChild(G[B]);
       for (const [o, G] of Object.entries(this.minimizableObjects.nodes))
-        B && m(G[B]).remove(), G[C] && this.svgg.appendChild(G[C]);
+        i && m(G[i]).remove(), G[B] && this.svgg.appendChild(G[B]);
       this.highlight();
     });
     /*
@@ -3858,7 +3857,7 @@ class PE extends HTMLElement {
     }
     this.resizeObserver = new ResizeObserver((i) => {
       for (const o of i)
-        this.repositionAbbreviationTable();
+        this.repositionAbbreviationTable(), this.handleAbstractionLevel();
     }), this.resizeObserver.observe(this), this.fetchDotString(this.dotSrc).then((i) => {
       this.render(i);
     }).catch((i) => {
@@ -3871,7 +3870,7 @@ class PE extends HTMLElement {
     (C = this.resizeObserver) == null || C.disconnect();
   }
 }
-customElements.define("dot-graph-viz", PE);
+customElements.define("dot-graph-viz", pE);
 export {
-  PE as DotGraphViz
+  pE as DotGraphViz
 };
