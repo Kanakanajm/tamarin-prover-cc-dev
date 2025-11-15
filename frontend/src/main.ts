@@ -266,22 +266,22 @@ export class DotGraphViz extends HTMLElement {
     }
     // Cancel previous fetch event.
     this.cancelFetch();
-    // this.fetchJsonString(this.jsonSrc)
-    //       .then((d) => {
-    //         console.log("fetched json string");
-    //         this.renderJson(d);
-    //       }).catch(err => {
-    //         if (err === FETCH_CANCELED) {
-    //           // Output as trace only when fetch is rejected due to canceling.
-    //           console.debug(FETCH_CANCELED);
-    //         } else {
-    //           // Other rejects.
-    //           console.error(err);
-    //         }
-    //       });
+    this.fetchJsonString(this.jsonSrc)
+          .then((d) => {
+            console.log("fetched json string");
+            this.renderJson(d);
+          }).catch(err => {
+            if (err === FETCH_CANCELED) {
+              // Output as trace only when fetch is rejected due to canceling.
+              console.debug(FETCH_CANCELED);
+            } else {
+              // Other rejects.
+              console.error(err);
+            }
+          });
     // this.fetchDotString(this.dotSrc)
     //   .then((d) => {
-    //     this.render(d);
+    //     // this.render(d);
     //   }).catch(err => {
     //     if (err === FETCH_CANCELED) {
     //       // Output as trace only when fetch is rejected due to canceling.
@@ -291,15 +291,17 @@ export class DotGraphViz extends HTMLElement {
     //       console.error(err);
     //     }
     //   });
+    
     try {
       // Fetch and render JSON first
       const jsonData = await this.fetchJsonString(this.jsonSrc);
       console.log("fetched json string");
       this.renderJson(jsonData);
 
-      // Now fetch and render DOT
-      const dotData = await this.fetchDotString(this.dotSrc);
-      this.render(dotData);
+
+    // Now fetch and render DOT
+    // const dotData = await this.fetchDotString(this.dotSrc);
+    // this.render(dotData);
 
     } catch (err) {
       if (err === FETCH_CANCELED) {
@@ -386,10 +388,7 @@ export class DotGraphViz extends HTMLElement {
       })
     }
   }
-  /** Render the graph as SVG given dot graph definition
-   * 
-   * @param dotString The dot graph definition (usually saved as a `*.dot` file and start with "digraph" in our case)
-   */
+
   render = (dotString: string) => {
     instance().then(viz => {
       /* Resetting all the components */
@@ -418,16 +417,16 @@ export class DotGraphViz extends HTMLElement {
       this.graph = new DiGraph(this.json, this.svg);
 
       // debug infos
-      console.debug("Received dot string:");
-      console.debug(dotString);
+      // console.debug("Received dot string:");
+      console.debug('dot in dotrender: '+ dotString);
       // console.debug(this.svg);
-      console.debug(this.json);
-      console.debug(this.graph);
+      // console.debug(this.json);
+      // console.debug(this.graph);
 
       // attach SVG to DOM
       this.append(this.svg);
 
-      console.log(this.canPopup);
+      // console.log(this.canPopup);
 
       if (this.canPopup) {
         // Show pop-out (open popup) button.

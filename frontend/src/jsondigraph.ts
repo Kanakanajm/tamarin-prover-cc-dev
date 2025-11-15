@@ -82,11 +82,11 @@ export function flattenPair(node: JgnNode): string[] {
 }
 
 export interface Abbrev {
-    jgaAbbrev: {
+    jgaAbbrev?: {
         jgnConst: string; 
     };
-    jgaExpansion: JgnNode; 
-    jgaTerm: JgnNode; 
+    jgaExpansion?: JgnNode; 
+    jgaTerm?: JgnNode; 
 }
 
 export interface Clusters {
@@ -94,41 +94,41 @@ export interface Clusters {
 }
 export interface Edges {
 
-    jgeRelation: string;
-    jgeSource: string;
-    jgeTarget: string;
+    jgeRelation?: string;
+    jgeSource?: string;
+    jgeTarget?: string;
 
 }
 export interface Nodes {
     jgnId: string;
-    jgnLabel: string;
-	jgnMetadata: Metadata[];
-    jgnType	: string;
+    jgnLabel?: string;
+	jgnMetadata?: Metadata;
+    jgnType?: string;
 }
 export interface Metadata {
-    jgnActs: Actions[];
-	jgnConcs: Actions[];
-	jgnPrems: Actions[];
-    jgnType	:	string;
+    jgnActs?: Actions[];
+	jgnConcs?: Actions[];
+	jgnPrems?: Actions[];
+    jgnType?: string;
 }
 
 export interface Actions {
-jgnFactId	:	string;
-jgnFactMult	:	string;
-jgnFactName	:	string;
-jgnFactShow	:	string;
-jgnFactTag	:	string;
-jgnFactTerms:	JgnNode[];
+jgnFactId: string;
+jgnFactMult?: string;
+jgnFactName?: string;
+jgnFactShow?: string;
+jgnFactTag?: string;
+jgnFactTerms?: JgnNode[];
 }
 
 export interface Graph {
-    jgAbbrevs: Abbrev[];
-    jgClusters: Clusters[];
-    jgDirected: boolean;
-    jgEdges: Edges[];
-    jgLabel: string;
-    jgNodes: Nodes[];
-    jgType: string;
+    jgAbbrevs?: Abbrev[];
+    jgClusters?: Clusters[];
+    jgDirected?: boolean;
+    jgEdges?: Edges[];
+    jgLabel?: string;
+    jgNodes?: Nodes[];
+    jgType?: string;
 }
 
 export interface JsonGraph {
