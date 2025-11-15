@@ -39,12 +39,98 @@ function composeEdgeTitle(edge: DiEdge, nodes: NodeDict) {
 let jsonGraphSrc: JsonGraph | undefined;
 export class JsonDiGraph {
 
+    nodeMap: any = {};
+    factMap: any = {};
+    combinedMap: any = {};
+    counter = 0;
     jsonString: JsonGraph;
-    constructor(json: JsonGraph) {
+    dotstring: string = '';
+    shape: string = '';
+    label: string = '';
+    constructor(json: JsonGraph) 
+    {
         this.jsonString = json;
         jsonGraphSrc = json;
         //Fetched and mapped the JSON string recieved 
-        console.debug("inside constructor: jsonGraphSrc: ", jsonGraphSrc);
+        jsonGraphSrc?.graphs?.forEach((graph) => {
+        graph.jgNodes?.forEach((node) => {
+            
+                node.jgnMetadata?.jgnPrems?.forEach((prem) => {
+                    this.factMap[prem.jgnFactId] = 'n' + this.counter++;
+                });
+                node.jgnMetadata?.jgnConcs?.forEach((conc) => {
+                    this.factMap[conc.jgnFactId] = 'n' + this.counter++;
+                });
+                node.jgnMetadata?.jgnActs?.forEach((act) => {
+                    this.factMap[act.jgnFactName!] = 'n' + this.counter++;
+                });
+                this.nodeMap[node.jgnId] = 'n' + this.counter++;
+        });
+    });
+    this.buildDotString()
+}
+    public buildDotString() {
+
+    this.dotstring = `
+        digraph "G" { 
+        nodesep="0.3";
+        ranksep="0.3";
+        node[fontsize="8",fontname="Helvetica",width="0.3",height="0.2"];
+        edge[fontsize="8",fontname="Helvetica"];
+        `
+    jsonGraphSrc?.graphs?.forEach((graph) => {
+        graph.jgNodes?.forEach((node) => {
+        
+        const prems = (node.jgnMetadata?.jgnPrems || [])
+        .map(prem => `<${this.factMap[prem.jgnFactId]}> ${prem.jgnFactShow}`)
+        .join("|");
+
+        const acts = (node.jgnMetadata?.jgnActs || [])
+        .map(act => `<${this.factMap[act.jgnFactName!]}> ${node.jgnId} : ${node.jgnLabel}[${act.jgnFactShow}]`)
+        .join("|");
+
+        const concs = (node.jgnMetadata?.jgnConcs || [])
+        .map(conc => `<${this.factMap[conc.jgnFactId]}> ${conc.jgnFactShow}`)
+        .join("|");
+
+        if (node.jgnType === "unsolvedActionAtom") {
+            this.label = `${node.jgnLabel} @ ${node.jgnId}`;
+            this.shape = 'ellipse'
+        }
+        else 
+        {
+            this.label = `{{${prems}}|{${acts}}|{${concs}}}`;
+            this.shape= `record`
+        }
+        
+        this.dotstring += `${this.nodeMap[node.jgnId]}[shape="${this.shape}",label="${this.label}"];`;
+        })
+        
+    });
+
+
+        //     digraph "G" {
+        // nodesep="0.3";
+        // ranksep="0.3";
+        // node[fontsize="8",fontname="Helvetica",width="0.3",height="0.2"];
+        // edge[fontsize="8",fontname="Helvetica"];
+        // n3[shape="record",label="{{<n0> Client_1( S, k )|<n1> In( h(k) )}|{<n2> #i : Client_2[SessKeyC( S, k )]}}",fillcolor="#d5d897",style="filled",fontcolor="black",role="Undefined"];
+        // n7[shape="record",label="{{<n4> !KU( k )}|{<n5> #j : isend[K( k )]}|{<n6> In( k )}}",fillcolor="#caa6ee",style="filled",fontcolor="black",role="Undefined"];
+        // n11[shape="record",label="{{<n8> !KU( h(k) )}|{<n9> #vf : isend[K( h(k) )]}|{<n10> In( h(k) )}}",fillcolor="#caa6ee",style="filled",fontcolor="black",role="Undefined"];
+        // n12[label="!KU( h(k) ) @ #vk",shape="ellipse",color="gray"];
+        // n13[label="!KU( k ) @ #vk.1",shape="ellipse",color="gray"];
+        // n11:n10 -> n3:n1[color="gray30"];
+        // n12 -> n11:n9[color="red",style="dashed"];
+        // n13 -> n7:n5[color="red",style="dashed"];
+
+        // }
+
+        this.dotstring += '}';
+        console.debug("nodeMap: ", this.nodeMap);
+        console.debug("factMap: ", this.factMap);
+        // console.debug("DotString: ", this.dotstring);
+        // console.debug("inside constructor: jsonGraphSrc: ", jsonGraphSrc);
+        return this.dotstring
     }
 }
 
