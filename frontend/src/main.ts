@@ -7,6 +7,8 @@ import { DiGraph, DiGraphConnections } from "./digraph";
 import './style.css';
 import { BroadcastMessage } from "./message";
 import { JsonDiGraph } from "./digraph";
+import exampleJson from "./example.json";
+import { showNode } from "./jsondigraph";
 
 const ZOOM_LEVEL_THRESHOLD = 0.99;
 const ARROW_HEAD_WIDTH = 7;
@@ -180,11 +182,11 @@ export class DotGraphViz extends HTMLElement {
   connectedCallback() {
     this.dotSrc = this.getAttribute("dotsrc");
 
-    if(this.dotSrc?.includes('interactive-graph'))
+    if (this.dotSrc?.includes('interactive-graph')) // ***WARNING*** backend api's url changed after feature-interactive-graph PR
     {
       this.jsonSrc = this.dotSrc.replace('interactive-graph', 'json');
     }
-    
+
 
     this.dotSrc = this.dotSrc?.split("?").shift(); // element before ?
     this.dotSrc = this.dotSrc?.concat("?").concat(constructDotSrcParamsFromCookie());
@@ -249,11 +251,16 @@ export class DotGraphViz extends HTMLElement {
   }
 
   renderSource = async () => {
+    if (import.meta.env.DEV) {
+      // use example.json for development mode
+      this.renderJson(exampleJson);
+      return;
+    }
     if (!this.dotSrc || !this.dotSrc.trim().length) {
       console.error("No dot graph source url provided.");
       return;
     }
-    if(!this.jsonSrc || !this.jsonSrc.trim().length) {
+    if (!this.jsonSrc || !this.jsonSrc.trim().length) {
       console.error("No json graph source url provided.");
       return;
     }
@@ -285,32 +292,99 @@ export class DotGraphViz extends HTMLElement {
     //     }
     //   });
     try {
-    // Fetch and render JSON first
-    const jsonData = await this.fetchJsonString(this.jsonSrc);
-    console.log("fetched json string");
-    this.renderJson(jsonData);
+      // Fetch and render JSON first
+      const jsonData = await this.fetchJsonString(this.jsonSrc);
+      console.log("fetched json string");
+      this.renderJson(jsonData);
 
-    // Now fetch and render DOT
-    const dotData = await this.fetchDotString(this.dotSrc);
-    this.render(dotData);
+      // Now fetch and render DOT
+      const dotData = await this.fetchDotString(this.dotSrc);
+      this.render(dotData);
 
-  } catch (err) {
-    if (err === FETCH_CANCELED) {
-      console.debug(FETCH_CANCELED);
-    } else {
-      console.error(err);
+    } catch (err) {
+      if (err === FETCH_CANCELED) {
+        console.debug(FETCH_CANCELED);
+      } else {
+        console.error(err);
+      }
     }
-  }
 
-      
+
   }
 
   // Render the graph using JSON string
   renderJson = (jsonString: any) => {
-      console.debug("Received Json string");
-      this.jsonGraph = new JsonDiGraph(jsonString);
+    console.debug("Received Json string");
+    this.jsonGraph = new JsonDiGraph(jsonString);
+    console.debug("jsonGraph: ", this.jsonGraph);
+    this.renderLegend();
+  }
 
-      console.debug("jsonGraph: " , this.jsonGraph);
+  /**
+   * Render legend box as a table on right bottom corner
+   * @remark
+   * If user click on the table row, it will highlight the clicked row and unhighlight the others.
+   * 
+   * Clicking on the other place of the document will unhighlight all row.
+   * 
+   * @todo
+   * Highlight actual graph nodes need to be done.
+   */
+  renderLegend = () => {
+    const abbrevs = this.jsonGraph?.jsonString.graphs[0].jgAbbrevs;
+    if (abbrevs) {
+      const lcontainer = document.createElement("div");
+      lcontainer.setAttribute("class", "lgd-container");
+      const ltable = document.createElement("table");
+      lcontainer.appendChild(ltable);
+
+      // clear all selection lambda
+      const clearSelection = () => {
+        for (const r of ltable.children) {
+          r.setAttribute("class", "lgd-item");
+        }
+      }
+      for (const abbrev of abbrevs) {
+        const legend = document.createElement("tr");
+        legend.setAttribute("class", "lgd-item");
+
+        // toggle highlight when user click on legend row
+        legend.addEventListener("click", function () {
+          if (this.classList.contains("active")) {
+            this.setAttribute("class", "lgd-item");
+          }
+          else {
+            clearSelection();
+            this.setAttribute("class", "lgd-item active");
+          }
+        });
+
+        // the three columns of the legend row
+        // the abbreviation
+        const legendAbbrev = document.createElement("td");
+        legendAbbrev.textContent = abbrev.jgaAbbrev.jgnConst;
+        legend.appendChild(legendAbbrev);
+
+        // the equal sign
+        const legendEq = document.createElement("td");
+        legendEq.textContent = "=";
+        legend.appendChild(legendEq);
+
+        // the expansion of the abbreviation
+        const legendExpand = document.createElement("td");
+        legendExpand.textContent = showNode(abbrev.jgaExpansion);
+        legend.appendChild(legendExpand);
+
+        ltable.appendChild(legend);
+      }
+      this.appendChild(lcontainer);
+      document.addEventListener("click", function(ev) {
+        if (ev.target instanceof Element && ev.target.tagName !== "TD" && ev.target.tagName !== "TR") {
+          // clear legend highlight when clicking on other places on the document than <td> or <tr>
+          clearSelection();
+        }
+      })
+    }
   }
   /** Render the graph as SVG given dot graph definition
    * 
@@ -503,7 +577,7 @@ export class DotGraphViz extends HTMLElement {
     return promise;
   };
   fetchJsonString = (url: string): Promise<any> => {
-  const { promise, resolve, reject } = Promise.withResolvers<any>();
+    const { promise, resolve, reject } = Promise.withResolvers<any>();
 
     this.cancelFetch = () => {
       reject(FETCH_CANCELED);
@@ -515,10 +589,10 @@ export class DotGraphViz extends HTMLElement {
       }
       return res.json();
     })
-    .then((json)=>{
-      resolve(json);
-    })
-    .catch(err => reject(err));
+      .then((json) => {
+        resolve(json);
+      })
+      .catch(err => reject(err));
     return promise;
   }
 
