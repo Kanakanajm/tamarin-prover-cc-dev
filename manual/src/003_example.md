@@ -432,7 +432,14 @@ now states that any occurrence of `LtkReveal( S )` will lead to a contradiction.
 
 *Note on the Graph*
 
-In a newer version of Tamarin, one can open the graph into another window by clicking either the `Open the Graph in New Tab` link or the `Popout` button under certain graphs. The links under graphs in the resources tab (Raw Resources or Refined Resources) or of the case studies under the main proof steps will open the same graph in a new tab. The buttons under the main proof step graph will open the same graph in a new tab just like the link version but with dynamic rendering enabled i.e. when user navigates through the proof steps (by clicking at certain proof step or using the `j` or `k` key), the graph at the popped out window will change accordingly.
+We can open the graph in another window by clicking either the `Open the Graph
+in New Tab` link or the `Popout` button under certain graphs. The links under
+graphs in the resources tab (Raw Resources or Refined Resources) or of th
+subcases studies under the main proof steps will open the same graph in a new
+tab. The buttons under the main proof step graph will open the same graph in a
+new window with dynamic rendering enabled; i.e., when we navigate through the
+proof steps (either by clicking at a certain proof step or using the `j` or `k`
+keys), the graph in the new window will change accordingly.
 
 To finish the proof, we can either continue manually by selecting the constraint
 to resolve next, or by calling the `autoprove` command, which selects the next
