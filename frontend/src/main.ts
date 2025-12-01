@@ -279,18 +279,18 @@ export class DotGraphViz extends HTMLElement {
               console.error(err);
             }
           });
-    // this.fetchDotString(this.dotSrc)
-    //   .then((d) => {
-    //     // this.render(d);
-    //   }).catch(err => {
-    //     if (err === FETCH_CANCELED) {
-    //       // Output as trace only when fetch is rejected due to canceling.
-    //       console.debug(FETCH_CANCELED);
-    //     } else {
-    //       // Other rejects.
-    //       console.error(err);
-    //     }
-    //   });
+    this.fetchDotString(this.dotSrc)
+      .then((d) => {
+        this.render(d);
+      }).catch(err => {
+        if (err === FETCH_CANCELED) {
+          // Output as trace only when fetch is rejected due to canceling.
+          console.debug(FETCH_CANCELED);
+        } else {
+          // Other rejects.
+          console.error(err);
+        }
+      });
     
     try {
       // Fetch and render JSON first

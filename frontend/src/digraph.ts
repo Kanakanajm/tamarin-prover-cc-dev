@@ -43,10 +43,13 @@ export class JsonDiGraph {
     factMap: any = {};
     combinedMap: any = {};
     counter = 0;
+    factcounter = 0;
     jsonString: JsonGraph;
     dotstring: string = '';
     shape: string = '';
     label: string = '';
+    edges: string = '';
+    srcFactIds: (string|undefined)[] = [];
     constructor(json: JsonGraph) 
     {
         this.jsonString = json;
@@ -56,14 +59,15 @@ export class JsonDiGraph {
         graph.jgNodes?.forEach((node) => {
             
                 node.jgnMetadata?.jgnPrems?.forEach((prem) => {
-                    this.factMap[prem.jgnFactId] = 'n' + this.counter++;
-                });
-                node.jgnMetadata?.jgnConcs?.forEach((conc) => {
-                    this.factMap[conc.jgnFactId] = 'n' + this.counter++;
+                    this.factMap[prem.jgnFactId] = 'n' + this.factcounter++;
                 });
                 node.jgnMetadata?.jgnActs?.forEach((act) => {
-                    this.factMap[act.jgnFactName!] = 'n' + this.counter++;
+                    this.factMap[act.jgnFactShow!] = 'n' + this.factcounter++;
                 });
+                node.jgnMetadata?.jgnConcs?.forEach((conc) => {
+                    this.factMap[conc.jgnFactId] = 'n' + this.factcounter++;
+                });
+                
                 this.nodeMap[node.jgnId] = 'n' + this.counter++;
         });
     });
@@ -71,6 +75,7 @@ export class JsonDiGraph {
 }
     public buildDotString() {
 
+    this.edges = "";
     this.dotstring = `
         digraph "G" { 
         nodesep="0.3";
@@ -81,17 +86,11 @@ export class JsonDiGraph {
     jsonGraphSrc?.graphs?.forEach((graph) => {
         graph.jgNodes?.forEach((node) => {
         
-        const prems = (node.jgnMetadata?.jgnPrems || [])
-        .map(prem => `<${this.factMap[prem.jgnFactId]}> ${prem.jgnFactShow}`)
-        .join("|");
+        const prems = node.jgnMetadata?.jgnPrems ? node.jgnMetadata?.jgnPrems.map(prem => `<${this.factMap[prem.jgnFactId]}> ${prem.jgnFactShow}`).join("|") : null;
 
-        const acts = (node.jgnMetadata?.jgnActs || [])
-        .map(act => `<${this.factMap[act.jgnFactName!]}> ${node.jgnId} : ${node.jgnLabel}[${act.jgnFactShow}]`)
-        .join("|");
+        const acts = node.jgnMetadata?.jgnActs ? node.jgnMetadata?.jgnActs.map(act => `<${this.factMap[act.jgnFactShow!]}> ${node.jgnId} : ${node.jgnLabel}[${act.jgnFactShow}]`).join("|") : null;
 
-        const concs = (node.jgnMetadata?.jgnConcs || [])
-        .map(conc => `<${this.factMap[conc.jgnFactId]}> ${conc.jgnFactShow}`)
-        .join("|");
+        const concs = node.jgnMetadata?.jgnConcs ? node.jgnMetadata?.jgnConcs.map(conc => `<${this.factMap[conc.jgnFactId]}> ${conc.jgnFactShow}`).join("|") : null;
 
         if (node.jgnType === "unsolvedActionAtom") {
             this.label = `${node.jgnLabel} @ ${node.jgnId}`;
@@ -99,37 +98,47 @@ export class JsonDiGraph {
         }
         else 
         {
-            this.label = `{{${prems}}|{${acts}}|{${concs}}}`;
+            const rec = [prems, acts, concs].filter(Boolean);
+            this.label = '{' + rec.map(r => `{${r}}`).join('|') + '}';
+            // this.label = `{${prems? `{${prems}}`:''}${acts? `|{${acts}}`:''}${concs? `|{${concs}}`:''}}`;
             this.shape= `record`
         }
-        
-        this.dotstring += `${this.nodeMap[node.jgnId]}[shape="${this.shape}",label="${this.label}"];`;
+
+        this.dotstring += `${this.nodeMap[node.jgnId]}[shape="${this.shape}",label="${this.label}"];\n`;
         })
         
     });
+    jsonGraphSrc?.graphs?.forEach((graph) => {
+        graph.jgEdges?.forEach((edge) => {
+            if(edge.jgeRelation!='LessAtoms') {
+                const arrsrc = edge.jgeSource?.split(':') || '';
+                const arrtar = edge.jgeTarget?.split(':') || '';
+                this.edges += `${this.nodeMap[arrsrc[0]]}:${this.factMap[edge.jgeSource!]} -> ${this.nodeMap[arrtar[0]]}:${this.factMap[edge.jgeTarget!]};\n`;
+            }
+            else {
+               
+                const srcNode = graph.jgNodes?.find((node)=>node.jgnId==edge.jgeSource);
+                const targetNode = graph.jgNodes?.find((node)=> node.jgnId==edge.jgeTarget);
+                console.debug('srcNode = ', srcNode);
+                
+                 srcNode?.jgnMetadata?.jgnActs?.forEach(act=>{
+                    const factId = targetNode?.jgnMetadata?.jgnPrems?.find(prem=>
+                        prem.jgnFactName == act.jgnFactName
+                    )
+                    if(factId){
+                        this.edges += `${this.nodeMap[srcNode.jgnId]} -> ${this.nodeMap[targetNode?.jgnId!]}:${this.factMap[factId.jgnFactId]};\n`;
+                    }
+                })
 
+            }
+        })
+    })
 
-        //     digraph "G" {
-        // nodesep="0.3";
-        // ranksep="0.3";
-        // node[fontsize="8",fontname="Helvetica",width="0.3",height="0.2"];
-        // edge[fontsize="8",fontname="Helvetica"];
-        // n3[shape="record",label="{{<n0> Client_1( S, k )|<n1> In( h(k) )}|{<n2> #i : Client_2[SessKeyC( S, k )]}}",fillcolor="#d5d897",style="filled",fontcolor="black",role="Undefined"];
-        // n7[shape="record",label="{{<n4> !KU( k )}|{<n5> #j : isend[K( k )]}|{<n6> In( k )}}",fillcolor="#caa6ee",style="filled",fontcolor="black",role="Undefined"];
-        // n11[shape="record",label="{{<n8> !KU( h(k) )}|{<n9> #vf : isend[K( h(k) )]}|{<n10> In( h(k) )}}",fillcolor="#caa6ee",style="filled",fontcolor="black",role="Undefined"];
-        // n12[label="!KU( h(k) ) @ #vk",shape="ellipse",color="gray"];
-        // n13[label="!KU( k ) @ #vk.1",shape="ellipse",color="gray"];
-        // n11:n10 -> n3:n1[color="gray30"];
-        // n12 -> n11:n9[color="red",style="dashed"];
-        // n13 -> n7:n5[color="red",style="dashed"];
-
-        // }
-
+        this.dotstring += `${this.edges}`
         this.dotstring += '}';
         console.debug("nodeMap: ", this.nodeMap);
         console.debug("factMap: ", this.factMap);
-        // console.debug("DotString: ", this.dotstring);
-        // console.debug("inside constructor: jsonGraphSrc: ", jsonGraphSrc);
+
         return this.dotstring
     }
 }
