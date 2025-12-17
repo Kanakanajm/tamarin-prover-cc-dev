@@ -10,6 +10,7 @@ export default {
             },
             fileName: (format, entryName) => `intdot-${entryName}.${format}.js`,
             cssFileName: 'intdot-style',
+            formats: ['es']
         },
         rollupOptions: {
             external: []
