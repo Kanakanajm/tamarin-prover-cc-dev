@@ -67,6 +67,7 @@ export class JsonDiGraph {
                 node.jgnMetadata?.jgnConcs?.forEach((conc) => {
                     this.factMap[conc.jgnFactId] = 'n' + this.factcounter++;
                 });
+                // this.factMap[node.jgnLabel!] = 'n' + this.factcounter++;
                 
                 this.nodeMap[node.jgnId] = 'n' + this.counter++;
         });
@@ -85,12 +86,20 @@ export class JsonDiGraph {
         `
     jsonGraphSrc?.graphs?.forEach((graph) => {
         graph.jgNodes?.forEach((node) => {
-        
-        const prems = node.jgnMetadata?.jgnPrems ? node.jgnMetadata?.jgnPrems.map(prem => `<${this.factMap[prem.jgnFactId]}> ${prem.jgnFactShow}`).join("|") : null;
+
+        const prems = node.jgnMetadata?.jgnPrems ? node.jgnMetadata?.jgnPrems.map(prem => { 
+            return `<${this.factMap[prem.jgnFactId]}> ${prem.jgnFactShow}`; 
+        }).join("|") : null;
 
         const acts = node.jgnMetadata?.jgnActs ? node.jgnMetadata?.jgnActs.map(act => `<${this.factMap[act.jgnFactShow!]}> ${node.jgnId} : ${node.jgnLabel}[${act.jgnFactShow}]`).join("|") : null;
 
-        const concs = node.jgnMetadata?.jgnConcs ? node.jgnMetadata?.jgnConcs.map(conc => `<${this.factMap[conc.jgnFactId]}> ${conc.jgnFactShow}`).join("|") : null;
+        const concs = node.jgnMetadata?.jgnConcs ? node.jgnMetadata?.jgnConcs.map(conc => { 
+            if(node.jgnType === 'isFreshRule') {
+                const id = conc.jgnFactId?.split(':') || '';
+                return `<${this.nodeMap[id[0]]}> ${node.jgnId} : ${node.jgnLabel}}|{<${this.factMap[conc.jgnFactId]}> ${conc.jgnFactShow}` 
+            }
+            return `<${this.factMap[conc.jgnFactId]}> ${conc.jgnFactShow}`; 
+        }).join("|") : null;
 
         if (node.jgnType === "unsolvedActionAtom") {
             this.label = `${node.jgnLabel} @ ${node.jgnId}`;
@@ -100,6 +109,7 @@ export class JsonDiGraph {
         {
             const rec = [prems, acts, concs].filter(Boolean);
             this.label = '{' + rec.map(r => `{${r}}`).join('|') + '}';
+            
             // this.label = `{${prems? `{${prems}}`:''}${acts? `|{${acts}}`:''}${concs? `|{${concs}}`:''}}`;
             this.shape= `record`
         }
