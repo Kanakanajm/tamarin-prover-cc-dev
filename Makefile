@@ -41,7 +41,7 @@ profiling: $(FRONTEND)
 
 # Clean target for Tamarin
 .PHONY: tamarin-clean
-tamarin-clean: $(FRONTEND)
+tamarin-clean:
 	stack clean
 
 # Clean Tamarin
