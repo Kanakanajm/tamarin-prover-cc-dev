@@ -13,41 +13,44 @@ endif
 # Try to install Tamarin
 default: tamarin
 
+FRONTEND = data/js/intdot-graph.es.js data/js/intdot-staticgraph.es.js data/js/intdot-dynamicgraph.es.js data/css/intdot-style.css
+$(FRONTEND):
+	cd frontend && npm install && npm run build
+	cp frontend/dist/intdot-graph.es.js data/js/
+	cp frontend/dist/intdot-staticgraph.es.js data/js/
+	cp frontend/dist/intdot-dynamicgraph.es.js data/js/
+	cp frontend/dist/intdot-style.css data/css/
+
 # Default Tamarin installation via stack, multi-threaded
 .PHONY: tamarin
-tamarin:
+tamarin: $(FRONTEND)
 	stack setup
 	stack install
 
 # Single-threaded Tamarin
 .PHONY: single
-single:
+single: $(FRONTEND)
 	stack setup
 	stack install --flag tamarin-prover:-threaded
 
 # Tamarin with profiling options, single-threaded
 .PHONY: profiling
-profiling:
+profiling: $(FRONTEND)
 	stack setup
 	stack install --no-system-ghc --executable-profiling --library-profiling --ghc-options="-fprof-auto -rtsopts" --flag tamarin-prover:-threaded
 
 # Clean target for Tamarin
 .PHONY: tamarin-clean
-tamarin-clean:
+tamarin-clean: $(FRONTEND)
 	stack clean
 
 # Clean Tamarin
 .PHONY: clean
 clean:	tamarin-clean
 
-# Build Frontend
 .PHONY: frontend
 frontend:
-	cd frontend && npm install && npm run build
-	cp frontend/dist/intdot-graph.es.js data/js/
-	cp frontend/dist/intdot-staticgraph.es.js data/js/
-	cp frontend/dist/intdot-dynamicgraph.es.js data/js/
-	cp frontend/dist/intdot-style.css data/css/
+	$(MAKE) $(FRONTEND)
 
 # ###########################################################################
 # NOTE the remainder makefile is FOR DEVELOPERS ONLY.
