@@ -41,6 +41,7 @@ export class JsonDiGraph {
 
     nodeMap: any = {};
     factMap: any = {};
+    ruleMap: any = {};
     combinedMap: any = {};
     counter = 0;
     factcounter = 0;
@@ -67,6 +68,8 @@ export class JsonDiGraph {
                 node.jgnMetadata?.jgnConcs?.forEach((conc) => {
                     this.factMap[conc.jgnFactId] = 'n' + this.factcounter++;
                 });
+                if(node.jgnType === "isProtocolRule" || node.jgnType === "isIntruderRule" || node.jgnType === "isFreshRule")
+                    this.ruleMap[node.jgnId] = 'n' + this.counter++;
                 // this.factMap[node.jgnLabel!] = 'n' + this.factcounter++;
                 
                 this.nodeMap[node.jgnId] = 'n' + this.counter++;
@@ -91,13 +94,14 @@ export class JsonDiGraph {
             return `<${this.factMap[prem.jgnFactId]}> ${prem.jgnFactShow}`; 
         }).join("|") : null;
 
+        const rules = node.jgnId ? `<${this.ruleMap[node.jgnId]}> ${node.jgnId} : ${node.jgnLabel}` : null;
         const acts = node.jgnMetadata?.jgnActs ? node.jgnMetadata?.jgnActs.map(act => `<${this.factMap[act.jgnFactShow!]}> ${node.jgnId} : ${node.jgnLabel}[${act.jgnFactShow}]`).join("|") : null;
 
         const concs = node.jgnMetadata?.jgnConcs ? node.jgnMetadata?.jgnConcs.map(conc => { 
-            if(node.jgnType === 'isFreshRule') {
-                const id = conc.jgnFactId?.split(':') || '';
-                return `<${this.nodeMap[id[0]]}> ${node.jgnId} : ${node.jgnLabel}}|{<${this.factMap[conc.jgnFactId]}> ${conc.jgnFactShow}` 
-            }
+            // if(node.jgnType === 'isFreshRule') {
+            //     const id = conc.jgnFactId?.split(':') || '';
+            //     return `<${this.nodeMap[id[0]]}> ${node.jgnId} : ${node.jgnLabel}}|{<${this.factMap[conc.jgnFactId]}> ${conc.jgnFactShow}` 
+            // }
             return `<${this.factMap[conc.jgnFactId]}> ${conc.jgnFactShow}`; 
         }).join("|") : null;
 
@@ -107,7 +111,15 @@ export class JsonDiGraph {
         }
         else 
         {
-            const rec = [prems, acts, concs].filter(Boolean);
+            let rec: any[] = []
+            if(acts) {
+                rec = [prems, acts, concs].filter(Boolean);
+            }
+            else {
+                if(node.jgnType === "isProtocolRule" || node.jgnType === "isIntruderRule" || node.jgnType === "isFreshRule") {
+                rec = [prems, rules, concs].filter(Boolean);
+                }  
+            }
             this.label = '{' + rec.map(r => `{${r}}`).join('|') + '}';
             
             // this.label = `{${prems? `{${prems}}`:''}${acts? `|{${acts}}`:''}${concs? `|{${concs}}`:''}}`;
