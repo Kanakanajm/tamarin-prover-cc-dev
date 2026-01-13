@@ -1,5 +1,5 @@
 import { findGElementIdByTitle } from "./dom"
-import { JsonGraph } from "./jsondigraph"
+import { JSONGraphs } from "./jsongraph"
 import { VizGraph } from "./viz"
 
 interface DiEdge {
@@ -36,7 +36,7 @@ function composeEdgeTitle(edge: DiEdge, nodes: NodeDict) {
     return `${nodes[edge.from].title}${edge.fromPort ? `:${edge.fromPort}` : ""}->${nodes[edge.to].title}${edge.toPort ? `:${edge.toPort}` : ""}`;
 }
 
-let jsonGraphSrc: JsonGraph | undefined;
+let jsonGraphSrc: JSONGraphs | undefined;
 export class JsonDiGraph {
 
     nodeMap: any = {};
@@ -44,13 +44,13 @@ export class JsonDiGraph {
     combinedMap: any = {};
     counter = 0;
     factcounter = 0;
-    jsonString: JsonGraph;
+    jsonString: JSONGraphs;
     dotstring: string = '';
     shape: string = '';
     label: string = '';
     edges: string = '';
     srcFactIds: (string|undefined)[] = [];
-    constructor(json: JsonGraph) 
+    constructor(json: JSONGraphs) 
     {
         this.jsonString = json;
         jsonGraphSrc = json;
