@@ -8,7 +8,7 @@ import './style.css';
 import { BroadcastMessage } from "./message";
 import { JsonDiGraph } from "./digraph";
 import exampleJson from "./example.json";
-import { showNode } from "./jsondigraph";
+import { prettyPrintTerm } from "./jsongraph";
 
 const ZOOM_LEVEL_THRESHOLD = 0.99;
 const ARROW_HEAD_WIDTH = 7;
@@ -319,7 +319,8 @@ export class DotGraphViz extends HTMLElement {
     console.debug("Received Json string");
     this.jsonGraph = new JsonDiGraph(jsonString);
     console.debug("jsonGraph: ", this.jsonGraph);
-    this.renderLegend();
+    const dot = this.jsonGraph.buildDotString();
+    this.render(dot)
   }
 
   /**
@@ -364,7 +365,7 @@ export class DotGraphViz extends HTMLElement {
         // the three columns of the legend row
         // the abbreviation
         const legendAbbrev = document.createElement("td");
-        legendAbbrev.textContent = abbrev.jgaAbbrev.jgnConst;
+        legendAbbrev.textContent = prettyPrintTerm(abbrev.jgaAbbrev);
         legend.appendChild(legendAbbrev);
 
         // the equal sign
@@ -374,7 +375,7 @@ export class DotGraphViz extends HTMLElement {
 
         // the expansion of the abbreviation
         const legendExpand = document.createElement("td");
-        legendExpand.textContent = showNode(abbrev.jgaExpansion);
+        legendExpand.textContent = prettyPrintTerm(abbrev.jgaExpansion);
         legend.appendChild(legendExpand);
 
         ltable.appendChild(legend);
@@ -519,6 +520,7 @@ export class DotGraphViz extends HTMLElement {
         this.svg.appendChild(abbrevTblEl);
       }
 
+      this.renderLegend();
     });
   }
 
