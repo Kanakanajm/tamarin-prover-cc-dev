@@ -8,7 +8,8 @@ import './style.css';
 import { BroadcastMessage } from "./message";
 import { JsonDiGraph } from "./digraph";
 import exampleJson from "./example.json";
-import { prettyPrintTerm } from "./jsongraph";
+import { JSONGraphs, prettyPrintTerm } from "./jsongraph";
+import { TamarinGraph, TamarinGraphBuildContext } from "./tmgraph";
 
 const ZOOM_LEVEL_THRESHOLD = 0.99;
 const ARROW_HEAD_WIDTH = 7;
@@ -315,12 +316,17 @@ export class DotGraphViz extends HTMLElement {
   }
 
   // Render the graph using JSON string
-  renderJson = (jsonString: any) => {
-    console.debug("Received Json string");
-    this.jsonGraph = new JsonDiGraph(jsonString);
-    console.debug("jsonGraph: ", this.jsonGraph);
-    const dot = this.jsonGraph.buildDotString();
-    this.render(dot)
+  renderJson = (jsonGraphs: JSONGraphs) => {
+    console.debug("Received Json string: " );
+    console.debug(jsonGraphs);
+
+    for (const jsonGraph of jsonGraphs.graphs) {
+      const ctx = new TamarinGraphBuildContext();
+      const tgraph = new TamarinGraph(jsonGraph, ctx);
+      console.debug(tgraph);
+      this.render(tgraph.dotstr());
+    }
+
   }
 
   /**
@@ -392,6 +398,7 @@ export class DotGraphViz extends HTMLElement {
 
   render = (dotString: string) => {
     instance().then(viz => {
+      console.debug(dotString);
       /* Resetting all the components */
       this.innerHTML = "";
       this.svg = undefined;
@@ -414,6 +421,8 @@ export class DotGraphViz extends HTMLElement {
       }
 
       this.svg = viz.renderSVGElement(dotString);
+      this.append(this.svg);
+      return;
       this.json = viz.renderJSON(dotString) as VizGraph;
       this.graph = new DiGraph(this.json, this.svg);
 
