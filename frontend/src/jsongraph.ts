@@ -5,13 +5,13 @@ export type JSONGraphNodeTermConst = {
 export type JSONGraphNodeTermFunct = {
     jgnFunct: string;
     jgnParams: JSONGraphNodeTerm[];
-    jgnShow: string; 
+    jgnShow: string;
 };
 
 export type JSONGraphNodeTerm = JSONGraphNodeTermConst | JSONGraphNodeTermFunct;
 
 export interface JsonGraphAbbrev {
-    jgaTerm: JSONGraphNodeTerm; 
+    jgaTerm: JSONGraphNodeTerm;
     jgaAbbrev: JSONGraphNodeTerm;
     jgaExpansion: JSONGraphNodeTerm;
 }
@@ -28,17 +28,35 @@ export interface JSONGraphEdge {
     jgeTarget: string;
 }
 
+export type JSONGraphNodeType =
+    "isIntruderRule"    |
+    "isDestrRule"       |
+    "isIEqualityRule"   |
+    "isConstrRule"      |
+    "isPubConstrRule"   |
+    "isNatConstrRule"   |
+    "isFreshRule"       |
+    "isIRecvRule"       |
+    "isISendRule"       |
+    "isCoerceRule"      |
+    "isProtocolRule"    |
+    "unknown rule type" |
+    "unsolvedActionAtom"|
+    "lastAtom"          |
+    "missingNodeConc"   |
+    "missingNodePrem";
+
 export interface JSONGraphNode {
     jgnId: string;
-    jgnType: string;
+    jgnType: JSONGraphNodeType;
     jgnLabel: string;
-	jgnMetadata?: JSONGraphNodeMetadata;
+    jgnMetadata?: JSONGraphNodeMetadata;
 }
 
 export interface JSONGraphNodeMetadata {
     jgnActs: JSONGraphNodeFact[];
-	jgnConcs: JSONGraphNodeFact[];
-	jgnPrems: JSONGraphNodeFact[];
+    jgnConcs: JSONGraphNodeFact[];
+    jgnPrems: JSONGraphNodeFact[];
 }
 
 export interface JSONGraphNodeFact {
@@ -86,8 +104,8 @@ export function isEqual(t1: JSONGraphNodeTerm, t2: JSONGraphNodeTerm): boolean {
         return t1.jgnConst === t2.jgnConst;
     }
 
-    if (isFunct(t1) && isFunct(t2) && 
-        t1.jgnFunct === t2.jgnFunct && 
+    if (isFunct(t1) && isFunct(t2) &&
+        t1.jgnFunct === t2.jgnFunct &&
         t1.jgnParams.length === t2.jgnParams.length) 
     {   
         // if two function terms have same function name and parameter length,
