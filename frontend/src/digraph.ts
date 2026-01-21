@@ -43,7 +43,8 @@ export class JsonDiGraph {
     factMap: any = {};
     ruleMap: any = {};
     combinedMap: any = {};
-    counter = 0;
+    nodecounter = 0;
+    rulecounter = 0;
     factcounter = 0;
     jsonString: JsonGraph;
     dotstring: string = '';
@@ -60,19 +61,22 @@ export class JsonDiGraph {
         graph.jgNodes?.forEach((node) => {
             
                 node.jgnMetadata?.jgnPrems?.forEach((prem) => {
-                    this.factMap[prem.jgnFactId] = 'n' + this.factcounter++;
+                    const portKey = `${node.jgnId}:${prem.jgnFactId}`;
+                    this.factMap[portKey] = 'f' + this.factcounter++;
                 });
                 node.jgnMetadata?.jgnActs?.forEach((act) => {
-                    this.factMap[act.jgnFactShow!] = 'n' + this.factcounter++;
+                    const portKey = `${node.jgnId}:${act.jgnFactShow!}`;
+                    this.factMap[portKey] = 'f' + this.factcounter++;
                 });
                 node.jgnMetadata?.jgnConcs?.forEach((conc) => {
-                    this.factMap[conc.jgnFactId] = 'n' + this.factcounter++;
+                    const portKey = `${node.jgnId}:${conc.jgnFactId}`;
+                    this.factMap[portKey] = 'f' + this.factcounter++;
                 });
                 if(node.jgnType === "isProtocolRule" || node.jgnType === "isIntruderRule" || node.jgnType === "isFreshRule")
-                    this.ruleMap[node.jgnId] = 'n' + this.counter++;
+                    this.ruleMap[node.jgnId] = 'r' + this.rulecounter++;
                 // this.factMap[node.jgnLabel!] = 'n' + this.factcounter++;
                 
-                this.nodeMap[node.jgnId] = 'n' + this.counter++;
+                this.nodeMap[node.jgnId] = 'n' + this.nodecounter++;
         });
     });
     this.buildDotString()
@@ -91,18 +95,34 @@ export class JsonDiGraph {
         graph.jgNodes?.forEach((node) => {
 
         const prems = node.jgnMetadata?.jgnPrems ? node.jgnMetadata?.jgnPrems.map(prem => { 
-            return `<${this.factMap[prem.jgnFactId]}> ${prem.jgnFactShow}`; 
+            const portKey = `${node.jgnId}:${prem.jgnFactId}`;
+            // return `<${this.factMap[portKey]}> ${prem.jgnFactShow}`; 
+            return `<${this.factMap[portKey]}> ${this.escapeLabel(prem.jgnFactShow!)}`;
         }).join("|") : null;
 
-        const rules = node.jgnId ? `<${this.ruleMap[node.jgnId]}> ${node.jgnId} : ${node.jgnLabel}` : null;
-        const acts = node.jgnMetadata?.jgnActs ? node.jgnMetadata?.jgnActs.map(act => `<${this.factMap[act.jgnFactShow!]}> ${node.jgnId} : ${node.jgnLabel}[${act.jgnFactShow}]`).join("|") : null;
-
+       let rules = '';
+        let acts = '';
+        if(node.jgnMetadata?.jgnActs) {
+            // const actTxt = node.jgnMetadata?.jgnActs.map(act => act.jgnFactShow).join(", ");
+            const actTxt = node.jgnMetadata.jgnActs
+            .map(act => this.escapeLabel(act.jgnFactShow!))
+            .join(", ");
+            acts = `<${this.ruleMap[node.jgnId!]}> ${node.jgnId} : ${node.jgnLabel}[${actTxt}]`;
+        }
+        else {
+            rules = `<${this.ruleMap[node.jgnId]}> ${node.jgnId} : ${node.jgnLabel}`;
+        }
+//         // acts = node.jgnMetadata?.jgnActs ? node.jgnMetadata?.jgnActs.map(act => { 
+//         //     return `<${this.factMap[act.jgnFactShow!]}> ${node.jgnId} : ${node.jgnLabel}[${act.jgnFactShow}]` 
+//         // }).join("|") : null;
         const concs = node.jgnMetadata?.jgnConcs ? node.jgnMetadata?.jgnConcs.map(conc => { 
             // if(node.jgnType === 'isFreshRule') {
             //     const id = conc.jgnFactId?.split(':') || '';
             //     return `<${this.nodeMap[id[0]]}> ${node.jgnId} : ${node.jgnLabel}}|{<${this.factMap[conc.jgnFactId]}> ${conc.jgnFactShow}` 
             // }
-            return `<${this.factMap[conc.jgnFactId]}> ${conc.jgnFactShow}`; 
+            const portKey = `${node.jgnId}:${conc.jgnFactId}`;
+            // return `<${this.factMap[portKey]}> ${conc.jgnFactShow}`;
+            return `<${this.factMap[portKey]}> ${this.escapeLabel(conc.jgnFactShow!)}`; 
         }).join("|") : null;
 
         if (node.jgnType === "unsolvedActionAtom") {
@@ -135,7 +155,7 @@ export class JsonDiGraph {
             if(edge.jgeRelation!='LessAtoms') {
                 const arrsrc = edge.jgeSource?.split(':') || '';
                 const arrtar = edge.jgeTarget?.split(':') || '';
-                this.edges += `${this.nodeMap[arrsrc[0]]}:${this.factMap[edge.jgeSource!]} -> ${this.nodeMap[arrtar[0]]}:${this.factMap[edge.jgeTarget!]};\n`;
+                this.edges += `${this.nodeMap[arrsrc[0]]}:${this.factMap[arrsrc[0]+':'+edge.jgeSource!]} -> ${this.nodeMap[arrtar[0]]}:${this.factMap[arrtar[0]+':'+edge.jgeTarget!]};\n`;
             }
             else {
                
@@ -148,7 +168,7 @@ export class JsonDiGraph {
                         prem.jgnFactName == act.jgnFactName
                     )
                     if(factId){
-                        this.edges += `${this.nodeMap[srcNode.jgnId]} -> ${this.nodeMap[targetNode?.jgnId!]}:${this.factMap[factId.jgnFactId]};\n`;
+                        this.edges += `${this.nodeMap[srcNode.jgnId]} -> ${this.nodeMap[targetNode?.jgnId!]}:${this.factMap[targetNode?.jgnId + ":" +factId.jgnFactId]};\n`;
                     }
                 })
 
@@ -163,7 +183,13 @@ export class JsonDiGraph {
 
         return this.dotstring
     }
+    escapeLabel(text: string): string {
+    return text
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
 }
+}
+
 
 export class DiGraph {
 
@@ -316,5 +342,6 @@ export class DiGraph {
         return connections;
     }
 }
+
 
 
