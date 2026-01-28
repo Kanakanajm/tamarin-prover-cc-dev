@@ -324,7 +324,9 @@ export class DotGraphViz extends HTMLElement {
       const ctx = new TamarinGraphBuildContext(jsonGraph.jgAbbrevs);
       const tgraph = new TamarinGraph(jsonGraph, ctx, 2);
       console.debug(tgraph);
-      this.render(tgraph.dot());
+      this.render(tgraph.dot()).then(() => {
+        this.renderLegend(ctx);
+      });
     }
 
   }
@@ -339,9 +341,8 @@ export class DotGraphViz extends HTMLElement {
    * @todo
    * Highlight actual graph nodes need to be done.
    */
-  renderLegend = () => {
-    const abbrevs = this.jsonGraph?.jsonString.graphs[0].jgAbbrevs;
-    if (abbrevs) {
+  renderLegend = (ctx: TamarinGraphBuildContext) => {
+    if (ctx.abbreviations.length > 0) {
       const lcontainer = document.createElement("div");
       lcontainer.setAttribute("class", "lgd-container");
       const ltable = document.createElement("table");
@@ -353,12 +354,18 @@ export class DotGraphViz extends HTMLElement {
           r.setAttribute("class", "lgd-item");
         }
       }
-      for (const abbrev of abbrevs) {
+      ctx.abbreviations.forEach((abbrev, index) => {
         const legend = document.createElement("tr");
         legend.setAttribute("class", "lgd-item");
+        
+        const highlightNodes = () => {
+          console.log(ctx.abbrevMap[index]);
+          this.highlightAbbrevNodes(Array.from(ctx.abbrevMap[index].values()));
+        }
 
         // toggle highlight when user click on legend row
         legend.addEventListener("click", function () {
+          // legend label highlight
           if (this.classList.contains("active")) {
             this.setAttribute("class", "lgd-item");
           }
@@ -366,6 +373,10 @@ export class DotGraphViz extends HTMLElement {
             clearSelection();
             this.setAttribute("class", "lgd-item active");
           }
+
+          // node highlight
+          highlightNodes();
+          
         });
 
         // the three columns of the legend row
@@ -385,7 +396,8 @@ export class DotGraphViz extends HTMLElement {
         legend.appendChild(legendExpand);
 
         ltable.appendChild(legend);
-      }
+      });
+
       this.appendChild(lcontainer);
       document.addEventListener("click", function(ev) {
         if (ev.target instanceof Element && ev.target.tagName !== "TD" && ev.target.tagName !== "TR") {
@@ -396,7 +408,7 @@ export class DotGraphViz extends HTMLElement {
     }
   }
 
-  render = (dot: string | DotGraph) => {
+  render = (dot: string | DotGraph) => new Promise<void>((resolve, reject) => {
     instance().then(viz => {
       /* Resetting all the components */
       this.innerHTML = "";
@@ -526,10 +538,10 @@ export class DotGraphViz extends HTMLElement {
 
         this.svg.appendChild(abbrevTblEl);
       }
-
-      this.renderLegend();
-    });
-  }
+      resolve();
+    })
+    .catch(err => reject(err));
+  });
 
   handlePopupOpenContentChange = () => {
     this.innerHTML = "";
@@ -876,6 +888,7 @@ export class DotGraphViz extends HTMLElement {
   }
 
   highlight = () => {
+    console.log(this.highlightConnections?.nodes);
     if (!this.graph || !this.svgg || !this.highlightConnections || (this.highlightConnections.nodes.length === 0 && this.highlightConnections.edges.length === 0))
       return;
 
@@ -896,6 +909,22 @@ export class DotGraphViz extends HTMLElement {
     }
   }
 
+  highlightAbbrevNodes = (nodeIds: string[]) => {
+    if (!this.graph || !this.svgg)
+      return;
+
+    // clear highlight
+    this.clearHighlight();
+
+    // add new highlight
+    this.svgg.classList.add("highlighted");
+
+    for (const n of nodeIds) {
+      select(this.svgg).selectChild("#"+n)
+        .classed("active", true);
+    }
+  }
+
   /*
     Clear the highlighted edges and nodes of the graph
   */
@@ -903,9 +932,9 @@ export class DotGraphViz extends HTMLElement {
     if (!this.svgg)
       return;
 
-    const g = select(this.svgg).classed("highlighted", false);
+    this.svgg.classList.remove("highlighted");
 
-    g.selectChildren("g.active")
+    select(this.svgg).selectChildren("g.active")
       .classed("active", false);
   };
 
