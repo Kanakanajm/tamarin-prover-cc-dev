@@ -1,4 +1,4 @@
-import { instance } from "@viz-js/viz";
+import { instance, Graph as DotGraph } from "@viz-js/viz";
 import { select, selectAll, zoom, create, D3ZoomEvent } from "d3";
 import { extendCurvePath, getCubicBezierCurve, getCubicBezierCurveGradients } from "./path";
 import { calculateCentroid, cross, direction, dot, Ellipse, intersect, inv, print2f, project, Ray, sub, traverse, Vec2 } from "./math";
@@ -254,7 +254,7 @@ export class DotGraphViz extends HTMLElement {
   renderSource = async () => {
     if (import.meta.env.DEV) {
       // use example.json for development mode
-      this.renderJson(exampleJson);
+      this.renderJson(exampleJson as JSONGraphs);
       return;
     }
     if (!this.dotSrc || !this.dotSrc.trim().length) {
@@ -270,7 +270,7 @@ export class DotGraphViz extends HTMLElement {
     this.fetchJsonString(this.jsonSrc)
           .then((d) => {
             console.log("fetched json string");
-            this.renderJson(d);
+            this.renderJson(d as JSONGraphs);
           }).catch(err => {
             if (err === FETCH_CANCELED) {
               // Output as trace only when fetch is rejected due to canceling.
@@ -321,10 +321,10 @@ export class DotGraphViz extends HTMLElement {
     console.debug(jsonGraphs);
 
     for (const jsonGraph of jsonGraphs.graphs) {
-      const ctx = new TamarinGraphBuildContext();
-      const tgraph = new TamarinGraph(jsonGraph, ctx);
+      const ctx = new TamarinGraphBuildContext(jsonGraph.jgAbbrevs);
+      const tgraph = new TamarinGraph(jsonGraph, ctx, 2);
       console.debug(tgraph);
-      this.render(tgraph.dotstr());
+      this.render(tgraph.dot());
     }
 
   }
@@ -396,9 +396,8 @@ export class DotGraphViz extends HTMLElement {
     }
   }
 
-  render = (dotString: string) => {
+  render = (dot: string | DotGraph) => {
     instance().then(viz => {
-      console.debug(dotString);
       /* Resetting all the components */
       this.innerHTML = "";
       this.svg = undefined;
@@ -420,15 +419,14 @@ export class DotGraphViz extends HTMLElement {
         return;
       }
 
-      this.svg = viz.renderSVGElement(dotString);
-      this.append(this.svg);
-      return;
-      this.json = viz.renderJSON(dotString) as VizGraph;
+      this.svg = viz.renderSVGElement(dot);
+      this.json = viz.renderJSON(dot) as VizGraph;
       this.graph = new DiGraph(this.json, this.svg);
 
       // debug infos
       // console.debug("Received dot string:");
-      console.debug('dot in dotrender: '+ dotString);
+      console.debug('dot in dotrender: ');
+      console.debug(dot)
       // console.debug(this.svg);
       // console.debug(this.json);
       // console.debug(this.graph);
