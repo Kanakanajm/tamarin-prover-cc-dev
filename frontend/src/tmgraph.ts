@@ -119,6 +119,7 @@ export abstract class TamarinGraphNode {
             name: this.nodeName()
         });
 
+        // allocate ports for all facts
         if (this.jgNode.jgnMetadata) {
             this.jgNode.jgnMetadata.jgnPrems.forEach(f => this.recordPorts(f));
             this.jgNode.jgnMetadata.jgnActs.forEach(f => this.recordPorts(f));
@@ -207,11 +208,24 @@ export class TamarinGraphRectBoxNode extends TamarinGraphNode {
             })
         );
     }
+
+    middleRow(afacts: JSONGraphNodeFact[]): DotNodeLabelCell {
+        let txt = this.jgNode.jgnId + " : " + this.jgNode.jgnLabel;
+        if (afacts.length > 0) {
+            txt += afacts.map(fact => {
+                const abbreviatedFact = abbreviate(this.nodeName(), fact, this.ctx);
+                return prettyPrintFact(abbreviatedFact);
+            }).join(",\\n");
+        }
+
+        return new DotNodeLabelCell(txt)
+    }
     
     label(): string {
         if (this.jgNode.jgnMetadata) {
             const tbl = new DotNodeLabelContainer([
                 this.factsToTblRow(this.jgNode.jgnMetadata.jgnPrems), // top row (premises)
+                this.middleRow(this.jgNode.jgnMetadata.jgnActs), // middle row (actions)
                 this.factsToTblRow(this.jgNode.jgnMetadata.jgnConcs) // bottom row (conclusions)
             ]);
 
@@ -260,7 +274,17 @@ export class TamarinGraphRoundBoxNode extends TamarinGraphNode {
     }
 
     label(): string {
-        return `${this.jgNode.jgnId} : action fact`;
+        let lbl = this.jgNode.jgnId + " : " + this.jgNode.jgnLabel;
+        if (this.jgNode.jgnMetadata) {
+             // TODO(J): redundant with the one in TamarinGraphRectBoxNode
+            if (this.jgNode.jgnMetadata.jgnActs.length > 0) {
+                lbl += this.jgNode.jgnMetadata.jgnActs.map(fact => {
+                    const abbreviatedFact = abbreviate(this.nodeName(), fact, this.ctx);
+                    return prettyPrintFact(abbreviatedFact);
+                }).join(",\\n");
+            }
+        }
+        return lbl;
     }
 
     nodeAttributes = (): Attributes => ({
