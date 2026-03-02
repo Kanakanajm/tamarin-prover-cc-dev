@@ -8,6 +8,7 @@ import {
 import { 
     JSONGraph,
     JsonGraphAbbrev,
+    JSONGraphEdge,
     JSONGraphNode, 
     JSONGraphNodeFact, 
     prettyPrintFact, 
@@ -102,7 +103,44 @@ function abbreviate(
     });
     return fact;
 }
+export abstract class TamarinGraphEdge {
+    jgEdge: JSONGraphEdge;
+    ctx: TamarinGraphBuildContext;
+    // edgeId: number;
+    // edgeName = () => `edge${this.edgeId}`;
+    constructor(jgEdge: JSONGraphEdge, ctx: TamarinGraphBuildContext) {
+        this.jgEdge = jgEdge;
+        this.ctx = ctx;
+        // this.edgeId = ctx.newEdgeId();
+    }
+    abstract egdeAttributes(): Attributes;
+    
+    //  const tailLoc = this.ctx.nodeLocation(e.jgeSource);
+    //         const headLoc = this.ctx.nodeLocation(e.jgeTarget);
 
+    //         let dotEdgeAttr: Attributes = {};
+    //         if (tailLoc.port) 
+    //             dotEdgeAttr["tailport"] = tailLoc.port;
+    //         if (headLoc.port)
+    //             dotEdgeAttr["headport"] = headLoc.port;
+
+    //         let dotEdge: DotEdge = {
+    //             tail: tailLoc.name,
+    //             head: headLoc.name,
+    //             attributes: dotEdgeAttr
+    //         };
+            
+    //         return dotEdge;
+    dot = (): DotEdge => ({
+        tail: this.ctx.nodeLocation(this.jgEdge.jgeSource).name,
+        head: this.ctx.nodeLocation(this.jgEdge.jgeTarget).name,
+        attributes: {
+            id: `edge${this.ctx.newEdgeId()}`, // used as svg element's id
+            ...this.egdeAttributes()
+        }
+    })
+
+}
 export abstract class TamarinGraphNode {
     jgNode: JSONGraphNode;
     ctx: TamarinGraphBuildContext;
@@ -353,6 +391,79 @@ export class TamarinGraphMissingNode extends TamarinGraphNode {
     });
 }
 
+
+export class TamarinGraphSolidEdge extends TamarinGraphEdge {
+    arrowColor: string;
+    constructor(jgEdge: JSONGraphEdge, ctx: TamarinGraphBuildContext, arrowColor: string = "black") {
+        super(jgEdge, ctx);
+        this.arrowColor = arrowColor;
+    }
+
+    egdeAttributes(): Attributes {
+        return {
+            shape: "solid",
+            color: this.arrowColor,
+            tailport: this.ctx.nodeLocation(this.jgEdge.jgeSource).port!,
+            headport: this.ctx.nodeLocation(this.jgEdge.jgeTarget).port!,
+        };
+    }
+}
+export class TamarinGraphDottedEdge extends TamarinGraphEdge {
+    
+    arrowColor: string;
+    constructor(jgEdge: JSONGraphEdge, ctx: TamarinGraphBuildContext, arrowColor: string = "black") {
+        super(jgEdge, ctx);
+        this.arrowColor = arrowColor;
+    }
+
+   egdeAttributes(): Attributes {
+        return {
+            shape: "dashed",
+            color: this.arrowColor,
+            tailport: this.ctx.nodeLocation(this.jgEdge.jgeSource).port!,
+            headport: this.ctx.nodeLocation(this.jgEdge.jgeTarget).port!,
+        };
+    }
+}
+
+export class TamarinGraphProtoFactEdge extends TamarinGraphSolidEdge {
+    constructor(jgEdge: JSONGraphEdge, ctx: TamarinGraphBuildContext) {
+        super(jgEdge, ctx, "black");
+    }
+}
+export class TamarinGraphKFactEdge extends TamarinGraphSolidEdge {
+    constructor(jgEdge: JSONGraphEdge, ctx: TamarinGraphBuildContext) {
+        super(jgEdge, ctx, "black");
+    }
+}   
+export class TamarinGraphPersistentFactEdge extends TamarinGraphSolidEdge {
+    constructor(jgEdge: JSONGraphEdge, ctx: TamarinGraphBuildContext) {
+        super(jgEdge, ctx, "gray");
+    }
+}
+
+
+
+export class TamarinGraphLessAtomsEdge extends TamarinGraphDottedEdge {
+    constructor(jgEdge: JSONGraphEdge, ctx: TamarinGraphBuildContext) {
+        super(jgEdge, ctx, "red");
+    }
+    
+}
+
+export class TamarinGraphUnsolvedChainEdge extends TamarinGraphDottedEdge {
+    constructor(jgEdge: JSONGraphEdge, ctx: TamarinGraphBuildContext) {
+        super(jgEdge, ctx, "blue");
+    }
+}
+
+// default edge type if no specific relation is given
+export class TamarinGraphDefaultEdge extends TamarinGraphSolidEdge {
+    constructor(jgEdge: JSONGraphEdge, ctx: TamarinGraphBuildContext) {
+        super(jgEdge, ctx, "black");
+    }
+}
+
 // MARK: Node Factory
 
 function createTamarinGraphNode(
@@ -392,6 +503,28 @@ function createTamarinGraphNode(
     }
 }
 
+function createTamarinGraphEdge(
+    jgEdge: JSONGraphEdge, 
+    ctx: TamarinGraphBuildContext, 
+    simplification: TamarinGraphSimplificationLevel): TamarinGraphEdge {
+        console.debug(simplification);
+        switch(jgEdge.jgeRelation) {
+            case "KFact":
+                return new TamarinGraphKFactEdge(jgEdge, ctx);
+            case "PersistentFact":
+                return new TamarinGraphPersistentFactEdge(jgEdge, ctx);
+            case "ProtoFact":
+                // for now we don't differentiate edge types, but we can add styling based on edge relation if needed
+                return new TamarinGraphProtoFactEdge(jgEdge, ctx);
+            case "LessAtoms":
+                return new TamarinGraphLessAtomsEdge(jgEdge, ctx);
+            case "unsolvedChain":
+                return new TamarinGraphUnsolvedChainEdge(jgEdge, ctx);
+            case "default":
+                return new TamarinGraphDefaultEdge(jgEdge, ctx);
+        }
+    // for now we don't differentiate edge types, but we can add styling based on edge relation if needed
+}
 export class TamarinGraph {
     jsonGraph: JSONGraph;
     ctx: TamarinGraphBuildContext;
@@ -405,24 +538,8 @@ export class TamarinGraph {
 
         this.nodes = this.jsonGraph.jgNodes.map(n => createTamarinGraphNode(n, ctx, simplification));
         
-        this.edges = this.jsonGraph.jgEdges.map(e => {
-            const tailLoc = this.ctx.nodeLocation(e.jgeSource);
-            const headLoc = this.ctx.nodeLocation(e.jgeTarget);
-
-            let dotEdgeAttr: Attributes = {};
-            if (tailLoc.port) 
-                dotEdgeAttr["tailport"] = tailLoc.port;
-            if (headLoc.port)
-                dotEdgeAttr["headport"] = headLoc.port;
-
-            let dotEdge: DotEdge = {
-                tail: tailLoc.name,
-                head: headLoc.name,
-                attributes: dotEdgeAttr
-            };
-            
-            return dotEdge;
-        });
+        this.edges = this.jsonGraph.jgEdges.map(e => createTamarinGraphEdge(e, ctx, simplification).dot());
+       
     }
 
     dot(): DotGraph {

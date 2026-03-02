@@ -24,9 +24,17 @@ export interface JSONGraphCluster {
 
 export interface JSONGraphEdge {
     jgeSource: string;
-    jgeRelation: string;
+    jgeRelation: JSONGraphEdgeRelation;
     jgeTarget: string;
 }
+
+export type JSONGraphEdgeRelation =
+"KFact" | 
+"PersistentFact" |
+"ProtoFact" |
+"default" |
+"LessAtoms" |
+"unsolvedChain";
 
 export type JSONGraphNodeType =
     "isIntruderRule"    |

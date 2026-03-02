@@ -322,7 +322,7 @@ export class DotGraphViz extends HTMLElement {
 
     for (const jsonGraph of jsonGraphs.graphs) {
       const ctx = new TamarinGraphBuildContext(jsonGraph.jgAbbrevs);
-      const tgraph = new TamarinGraph(jsonGraph, ctx, 2);
+      const tgraph = new TamarinGraph(jsonGraph, ctx, 0);
       console.debug(tgraph);
       this.render(tgraph.dot()).then(() => {
         this.renderLegend(ctx);

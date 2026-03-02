@@ -184,7 +184,10 @@ export class DotNodeLabelContainer extends DotNodeLabelBase {
         super();
         this.children = children;
     }
-    dot = () => this.children.length === 0 ? "" :  `{${this.children.map(c => c.dot()).join("|")}}`;
+    dot = () => {
+        const rows = this.children.map(c => c.dot()).filter(Boolean);
+        return rows.length === 0 ? "" :  `{${rows.join("|")}}`
+    };
 }
 
 export class DotNodeLabelCell extends DotNodeLabelBase {
