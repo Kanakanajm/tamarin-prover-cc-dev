@@ -8,7 +8,7 @@ import './style.css';
 import { BroadcastMessage } from "./message";
 import { JsonDiGraph } from "./digraph";
 import exampleJson from "./example.json";
-import { JSONGraphs, prettyPrintTerm } from "./jsongraph";
+import {  JSONGraphs, prettyPrintTerm } from "./jsongraph";
 import { TamarinGraph, TamarinGraphBuildContext } from "./tmgraph";
 
 const ZOOM_LEVEL_THRESHOLD = 0.99;
@@ -280,18 +280,18 @@ export class DotGraphViz extends HTMLElement {
               console.error(err);
             }
           });
-    this.fetchDotString(this.dotSrc)
-      .then((d) => {
-        this.render(d);
-      }).catch(err => {
-        if (err === FETCH_CANCELED) {
-          // Output as trace only when fetch is rejected due to canceling.
-          console.debug(FETCH_CANCELED);
-        } else {
-          // Other rejects.
-          console.error(err);
-        }
-      });
+    // this.fetchDotString(this.dotSrc)
+    //   .then((d) => {
+    //     this.render(d);
+    //   }).catch(err => {
+    //     if (err === FETCH_CANCELED) {
+    //       // Output as trace only when fetch is rejected due to canceling.
+    //       console.debug(FETCH_CANCELED);
+    //     } else {
+    //       // Other rejects.
+    //       console.error(err);
+    //     }
+    //   });
     
     try {
       // Fetch and render JSON first
@@ -322,7 +322,9 @@ export class DotGraphViz extends HTMLElement {
 
     for (const jsonGraph of jsonGraphs.graphs) {
       const ctx = new TamarinGraphBuildContext(jsonGraph.jgAbbrevs);
-      const tgraph = new TamarinGraph(jsonGraph, ctx, 1);
+      const simplificationValue = getSimplificationFromCookie();
+      
+      const tgraph = new TamarinGraph(jsonGraph, ctx, simplificationValue === -1 ? 0 : simplificationValue);
       console.debug(tgraph);
       this.render(tgraph.dot()).then(() => {
         this.renderLegend(ctx);

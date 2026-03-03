@@ -86,7 +86,7 @@ export class TamarinGraphBuildContext {
     }
 }
 
-export type TamarinGraphSimplificationLevel = 0 | 1 | 2 | 3;
+// export type TamarinGraphSimplificationLevel = 0 | 1 | 2 | 3 ;
 
 function abbreviate(
     nodeName: string, 
@@ -205,18 +205,18 @@ function toString(hsv: HsvColor) {
 const color2hsv: Record<TamarinGraphNodeColor, HsvColor> = {
     green: {
         hue: 0.3,
-        saturation: 1,
-        value: 0.6
+        saturation: 0.4,
+        value: 0.7
     },
     blue: {
         hue: 0.6,
-        saturation: 1,
-        value: 0.6
+        saturation: 0.4,
+        value: 0.7
     },
     purple: {
         hue: 0.8,
-        saturation: 1,
-        value: 0.6
+        saturation: 0.4,
+        value: 0.7
     }
 };
 
@@ -395,74 +395,95 @@ export class TamarinGraphMissingNode extends TamarinGraphNode {
 
 
 export class TamarinGraphSolidEdge extends TamarinGraphEdge {
-    arrowColor: string;
-    constructor(jgEdge: JSONGraphEdge, ctx: TamarinGraphBuildContext, arrowColor: string = "black") {
+    edgeColor: string;
+    weight: string;
+    protoperStyle: string;
+    constructor(jgEdge: JSONGraphEdge, ctx: TamarinGraphBuildContext, edgeColor: string, weight?: string, protoperStyle?: string) {
         super(jgEdge, ctx);
-        this.arrowColor = arrowColor;
+        this.edgeColor = edgeColor;
+        this.weight = weight!;
+        this.protoperStyle = protoperStyle!;
     }
 
     egdeAttributes(): Attributes {
         return {
-            shape: "solid",
-            color: this.arrowColor,
+            style: this.protoperStyle || "solid",
+            weight: this.weight || "normal",
+            color: this.edgeColor,
             tailport: this.ctx.nodeLocation(this.jgEdge.jgeSource).port!,
             headport: this.ctx.nodeLocation(this.jgEdge.jgeTarget).port!,
         };
     }
 }
-export class TamarinGraphDottedEdge extends TamarinGraphEdge {
-    
-    arrowColor: string;
-    constructor(jgEdge: JSONGraphEdge, ctx: TamarinGraphBuildContext, arrowColor: string = "black") {
-        super(jgEdge, ctx);
-        this.arrowColor = arrowColor;
-    }
-
-   egdeAttributes(): Attributes {
-        return {
-            shape: "dashed",
-            color: this.arrowColor,
-            tailport: this.ctx.nodeLocation(this.jgEdge.jgeSource).port!,
-            headport: this.ctx.nodeLocation(this.jgEdge.jgeTarget).port!,
-        };
-    }
-}
-
 export class TamarinGraphProtoFactEdge extends TamarinGraphSolidEdge {
     constructor(jgEdge: JSONGraphEdge, ctx: TamarinGraphBuildContext) {
-        super(jgEdge, ctx, "black");
+        super(jgEdge, ctx, "black","10.0","bold");
     }
 }
 export class TamarinGraphKFactEdge extends TamarinGraphSolidEdge {
     constructor(jgEdge: JSONGraphEdge, ctx: TamarinGraphBuildContext) {
-        super(jgEdge, ctx, "black");
+        super(jgEdge, ctx, "orangered2");
     }
 }   
 export class TamarinGraphPersistentFactEdge extends TamarinGraphSolidEdge {
     constructor(jgEdge: JSONGraphEdge, ctx: TamarinGraphBuildContext) {
-        super(jgEdge, ctx, "gray");
+        super(jgEdge, ctx, "gray50","10.0","bold");
+    }
+}
+export class TamarinGraphDottedEdge extends TamarinGraphEdge {
+    
+    edgeColor: string;
+
+    constructor(jgEdge: JSONGraphEdge, ctx: TamarinGraphBuildContext, edgeColor: string) {
+        super(jgEdge, ctx);
+        this.edgeColor = edgeColor;
+    }
+
+   egdeAttributes(): Attributes {
+        return {
+            style: "dashed",
+            color: this.edgeColor,
+            tailport: this.ctx.nodeLocation(this.jgEdge.jgeSource).port!,
+            headport: this.ctx.nodeLocation(this.jgEdge.jgeTarget).port!,
+        };
     }
 }
 
-
-
 export class TamarinGraphLessAtomsEdge extends TamarinGraphDottedEdge {
     constructor(jgEdge: JSONGraphEdge, ctx: TamarinGraphBuildContext) {
+
+        if(jgEdge.reason?.includes("Fresh")) {
+        super(jgEdge, ctx, "blue3");
+        }
+        else if(jgEdge.reason?.includes("Formula")) {
+        super(jgEdge, ctx, "black");
+        }
+        else if(jgEdge.reason?.includes("InjectiveFacts")) {
+        super(jgEdge, ctx, "purple");
+        }
+        else if(jgEdge.reason?.includes("NormalForm")) {
+        super(jgEdge, ctx, "darkorange3");
+        }
+        else if(jgEdge.reason?.includes("Adversary")) {
         super(jgEdge, ctx, "red");
+        }
+        else {
+        super(jgEdge, ctx, "black");
+        }
     }
     
 }
 
 export class TamarinGraphUnsolvedChainEdge extends TamarinGraphDottedEdge {
     constructor(jgEdge: JSONGraphEdge, ctx: TamarinGraphBuildContext) {
-        super(jgEdge, ctx, "blue");
+        super(jgEdge, ctx, "green");
     }
 }
 
 // default edge type if no specific relation is given
 export class TamarinGraphDefaultEdge extends TamarinGraphSolidEdge {
     constructor(jgEdge: JSONGraphEdge, ctx: TamarinGraphBuildContext) {
-        super(jgEdge, ctx, "black");
+        super(jgEdge, ctx, "gray30");
     }
 }
 
@@ -471,7 +492,7 @@ export class TamarinGraphDefaultEdge extends TamarinGraphSolidEdge {
 function createTamarinGraphNode(
     jgNode: JSONGraphNode, 
     ctx: TamarinGraphBuildContext,
-    simplification: TamarinGraphSimplificationLevel): TamarinGraphNode {
+    simplification: number): TamarinGraphNode {
     switch (jgNode.jgnType) {
         case "isDestrRule":
         case "isIEqualityRule":
@@ -508,7 +529,7 @@ function createTamarinGraphNode(
 function createTamarinGraphEdge(
     jgEdge: JSONGraphEdge, 
     ctx: TamarinGraphBuildContext, 
-    simplification: TamarinGraphSimplificationLevel): TamarinGraphEdge {
+    simplification: number): TamarinGraphEdge {
         console.debug(simplification);
         switch(jgEdge.jgeRelation) {
             case "KFact":
@@ -516,7 +537,6 @@ function createTamarinGraphEdge(
             case "PersistentFact":
                 return new TamarinGraphPersistentFactEdge(jgEdge, ctx);
             case "ProtoFact":
-                // for now we don't differentiate edge types, but we can add styling based on edge relation if needed
                 return new TamarinGraphProtoFactEdge(jgEdge, ctx);
             case "LessAtoms":
                 return new TamarinGraphLessAtomsEdge(jgEdge, ctx);
@@ -525,7 +545,6 @@ function createTamarinGraphEdge(
             case "default":
                 return new TamarinGraphDefaultEdge(jgEdge, ctx);
         }
-    // for now we don't differentiate edge types, but we can add styling based on edge relation if needed
 }
 export class TamarinGraph {
     jsonGraph: JSONGraph;
@@ -534,7 +553,7 @@ export class TamarinGraph {
     nodes: TamarinGraphNode[];
     edges: DotEdge[];
 
-    constructor(jg:JSONGraph, ctx: TamarinGraphBuildContext, simplification: TamarinGraphSimplificationLevel) {
+    constructor(jg:JSONGraph, ctx: TamarinGraphBuildContext, simplification: number) {
         this.jsonGraph = jg;
         this.ctx = ctx;
 

@@ -104,6 +104,7 @@ data JSONGraphEdge = JSONGraphEdge
   { jgeSource :: String
   , jgeRelation :: String
   , jgeTarget :: String
+  , reason :: Maybe Reason
   } deriving (Show)
 
 -- | Representation of a cluster of a JSON graph.
@@ -138,7 +139,7 @@ data JSONGraphs = JSONGraphs
     } deriving (Show)
 
 -- | Derive ToJSON and FromJSON. 
-concat <$> mapM (deriveJSON defaultOptions) [''JSONGraphNodeFact, ''JSONGraphNodeMetadata, ''JSONGraphEdge, ''JSONGraphCluster, ''JSONGraphAbbrev, ''JSONGraph, ''JSONGraphs]
+concat <$> mapM (deriveJSON defaultOptions) [''JSONGraphNodeFact, ''JSONGraphNodeMetadata, ''JSONGraphEdge, ''JSONGraphCluster, ''JSONGraphAbbrev, ''JSONGraph, ''JSONGraphs, ''Reason]
 
 -- | Optional fields are not handled correctly with automatically derived instances
 -- hence, we have our own here.
@@ -372,6 +373,7 @@ graphEdgeToJSONGraphEdge (SystemEdge (src, tgt)) = do
   return $ JSONGraphEdge { jgeSource = show sid ++ ":c" ++ show concIdx
                 , jgeTarget = show tid ++ ":p" ++ show premIdx
                 , jgeRelation = getRelationType src tgt graph
+                , reason = Nothing
                 }
                 where 
                   (sid, ConcIdx concIdx) = src
@@ -380,11 +382,13 @@ graphEdgeToJSONGraphEdge (LessEdge (LessAtom src tgt reason)) =
   return $ JSONGraphEdge { jgeSource = show src
                 , jgeRelation = "LessAtoms"
                 , jgeTarget = show tgt
+                , reason = Just reason
                 }
 graphEdgeToJSONGraphEdge (UnsolvedChain (src, tgt)) = 
   return $ JSONGraphEdge { jgeSource = show sid ++ ":c" ++ show concIdx
                 , jgeTarget = show tid ++ ":p" ++ show premIdx
                 , jgeRelation = "unsolvedChain"
+                , reason = Nothing
                 }
                 where 
                   (sid, ConcIdx concIdx) = src
