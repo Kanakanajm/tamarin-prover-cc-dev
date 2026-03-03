@@ -6,6 +6,7 @@ import {
 } from "@viz-js/viz"
 
 import { 
+    depth,
     JSONGraph,
     JsonGraphAbbrev,
     JSONGraphEdge,
@@ -92,7 +93,8 @@ function abbreviate(
     fact: JSONGraphNodeFact, 
     ctx: TamarinGraphBuildContext): JSONGraphNodeFact {
     fact.jgnFactTerms = fact.jgnFactTerms.map(t => {
-        for (const [index, abbrev] of ctx.abbreviations.entries()) {
+        // desc order
+        for (const [index, abbrev] of ctx.abbreviations.sort((a, b) => depth(b.jgaTerm) - depth(a.jgaTerm)).entries()) {
             const result = replace(t, abbrev.jgaTerm, abbrev.jgaAbbrev);
             if (result.replaced) {
                 ctx.recordAbbrev(index, nodeName);

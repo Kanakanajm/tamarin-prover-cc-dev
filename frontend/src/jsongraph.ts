@@ -128,6 +128,17 @@ export function isEqual(t1: JSONGraphNodeTerm, t2: JSONGraphNodeTerm): boolean {
     return false;
 }
 
+export function depth(t: JSONGraphNodeTerm): number {
+    if (isConst(t)) {
+        return 1;
+    }
+
+    if (isFunct(t)) {
+        return 1 + Math.max(...t.jgnParams.map(p => depth(p)));
+    }
+    return 0;
+}
+
 export interface JSONGraphNodeTermReplaceResult {
     replaced: boolean;
     term: JSONGraphNodeTerm;
