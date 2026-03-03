@@ -322,7 +322,7 @@ export class DotGraphViz extends HTMLElement {
 
     for (const jsonGraph of jsonGraphs.graphs) {
       const ctx = new TamarinGraphBuildContext(jsonGraph.jgAbbrevs);
-      const tgraph = new TamarinGraph(jsonGraph, ctx, 0);
+      const tgraph = new TamarinGraph(jsonGraph, ctx, 1);
       console.debug(tgraph);
       this.render(tgraph.dot()).then(() => {
         this.renderLegend(ctx);
@@ -399,10 +399,12 @@ export class DotGraphViz extends HTMLElement {
       });
 
       this.appendChild(lcontainer);
-      document.addEventListener("click", function(ev) {
-        if (ev.target instanceof Element && ev.target.tagName !== "TD" && ev.target.tagName !== "TR") {
+      document.addEventListener("click", (ev) => {
+        if (ev.target instanceof Element && ev.target.tagName !== "TD" && ev.target.tagName !== "TR" && !ev.target.closest(this.getNodeSelector())) {
           // clear legend highlight when clicking on other places on the document than <td> or <tr>
           clearSelection();
+          this.clearHighlight();
+          this.highlightConnections = null;
         }
       })
     }
@@ -488,7 +490,7 @@ export class DotGraphViz extends HTMLElement {
       }
 
       // register clear highlight event
-      document.addEventListener("click", (event: MouseEvent) => {
+      this.svgg?.addEventListener("click", (event: MouseEvent) => {
         const target = event.target as HTMLElement;
         // only clear when click on area that is not a node
         if (!target.closest(this.getNodeSelector()) && !target.closest("text.abbrev")) {
@@ -918,10 +920,13 @@ export class DotGraphViz extends HTMLElement {
 
     // add new highlight
     this.svgg.classList.add("highlighted");
-
+    
     for (const n of nodeIds) {
-      select(this.svgg).selectChild("#"+n)
-        .classed("active", true);
+      const el = document.getElementById(n);
+      el?.classList.add("active");
+      setTimeout(() => {
+  console.log(el?.className);
+}, 1000);
     }
   }
 
