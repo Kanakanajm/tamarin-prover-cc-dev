@@ -10,12 +10,6 @@ equations:
     snd(<x.1, x.2>) = x.2,
     verify(sign(x.1, x.2), x.1, pk(x.2)) = true
 
-
-
-
-
-
-
 rule (modulo E) Generate_Signing_Keypair:
    [ Fr( ~sk ) ]
   -->
@@ -161,20 +155,6 @@ rule (modulo E) Sign_With_Compromised_Key:
 
   /* has exactly the trivial AC variant */
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /*
 WARNING: the following wellformedness checks failed!
 
@@ -201,10 +181,10 @@ Failed to derive Variable(s): sk
 
 /*
 Generated from:
-Tamarin version 1.11.0
+Tamarin version 1.12.0
 Maude version 3.5.1
-Git revision: d1fe8f7c328c32aac0588ab7e5a43be267577706 (with uncommited changes), branch: fix-remove-derivation-checks-regression-tests
-Compiled at: 2026-02-16 12:29:57.582345 UTC
+Git revision: f1832c9bc70a2a165991a0802520f2e07c023227 (with uncommited changes), branch: prepare-release
+Compiled at: 2026-03-06 22:21:49.602637 UTC
 */
 
 end
@@ -224,7 +204,7 @@ summary of summaries:
 analyzed: examples/features/derivation-checks/signatureDerivationTest.spthy
 
   output:          examples/features/derivation-checks/signatureDerivationTest.spthy.tmp
-  processing time: 0.20s
+  processing time: 0.19s
   
   WARNING: 1 wellformedness check failed!
            The analysis results might be wrong!

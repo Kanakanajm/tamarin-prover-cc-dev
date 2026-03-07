@@ -10,12 +10,6 @@ equations:
     sdec(senc(x.1, x.2), x.2) = x.1,
     snd(<x.1, x.2>) = x.2
 
-
-
-
-
-
-
 rule (modulo E) Init:
    [ Fr( ~kxs ) ] --[ KeyGen( $X ) ]-> [ !LongtermKey( ~kxs, $X ) ]
 
@@ -99,6 +93,11 @@ rule (modulo E) B_2:
 restriction singlelongtermkeyperuser:
   "∀ A #i #j. ((KeyGen( A ) @ #i) ∧ (KeyGen( A ) @ #j)) ⇒ (#i = #j)"
   // safety formula
+
+  /*
+  expanded formula:
+  "∀ A #i #j. ((KeyGen( A ) @ #i) ∧ (KeyGen( A ) @ #j)) ⇒ (#i = #j)"
+  */
 
 lemma executability:
   exists-trace
@@ -693,16 +692,6 @@ solve( StateA1( A, B, na ) ▶₀ #i )
   qed
 qed
 
-
-
-
-
-
-
-
-
-
-
 lemma AUTO_typing [sources]:
   all-traces
   "(((⊤) ∧
@@ -1177,10 +1166,10 @@ Facts occur in the left-hand-side but not in any right-hand-side
 
 /*
 Generated from:
-Tamarin version 1.11.0
+Tamarin version 1.12.0
 Maude version 3.5.1
-Git revision: d1fe8f7c328c32aac0588ab7e5a43be267577706 (with uncommited changes), branch: fix-remove-derivation-checks-regression-tests
-Compiled at: 2026-02-16 12:29:57.582345 UTC
+Git revision: f1832c9bc70a2a165991a0802520f2e07c023227 (with uncommited changes), branch: prepare-release
+Compiled at: 2026-03-06 22:21:49.602637 UTC
 */
 
 end

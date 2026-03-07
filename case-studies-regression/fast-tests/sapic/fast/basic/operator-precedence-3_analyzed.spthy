@@ -163,10 +163,10 @@ restriction single_session:
 
 /*
 Generated from:
-Tamarin version 1.11.0
+Tamarin version 1.12.0
 Maude version 3.5.1
-Git revision: b41a00532848fa29f1a2d6a2a7a551a2b4113b86 (with uncommited changes), branch: HEAD
-Compiled at: 2026-03-06 16:12:23.101346655 UTC
+Git revision: f1832c9bc70a2a165991a0802520f2e07c023227 (with uncommited changes), branch: prepare-release
+Compiled at: 2026-03-06 22:21:49.602637 UTC
 */
 
 end
@@ -178,7 +178,7 @@ summary of summaries:
 analyzed: examples/sapic/fast/basic/operator-precedence-3.spthy
 
   output:          examples/sapic/fast/basic/operator-precedence-3.spthy.tmp
-  processing time: 0.05s
+  processing time: 0.04s
   
   elseIsResolvedInnerFirst (exists-trace): verified (4 steps)
 
