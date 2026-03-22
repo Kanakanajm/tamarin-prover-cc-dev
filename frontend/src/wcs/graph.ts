@@ -118,6 +118,8 @@ export class DotGraphViz extends HTMLElement {
   initTransform?: string;
   zoomLevel: ZoomLevel = "ZoomIn"; // the graph always starts with most detailed zoom
 
+  lod: boolean = false; // Level of Detail: abstract node content when zoom out or not
+
   // here stores nodes and edges that should be rendered based on current zoom level
   minimizableObjects: {
     edges: { [key: string]: MinimizableObject },
@@ -204,6 +206,7 @@ export class DotGraphViz extends HTMLElement {
   // }
 
   connectedCallback() {
+    this.lod = document.cookie.indexOf('lod') !== -1;
     this.dotSrc = this.getAttribute("dotsrc");
     this.dotSrc = this.dotSrc?.split("?").shift(); // element before ?
     this.dotSrcParams = constructDotSrcParamsFromCookie();
@@ -580,7 +583,9 @@ export class DotGraphViz extends HTMLElement {
 
     // scale the graph: attach the zoom transform after the initial translation
     select(this.svgg).attr("transform", event.transform.toString() + " " + this.initTransform);
-    this.handleAbstractionLevel();
+    if (this.lod) {
+      this.handleAbstractionLevel();
+    }
   };
 
   handleAbstractionLevel = () => {
