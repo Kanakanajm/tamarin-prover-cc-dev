@@ -405,6 +405,23 @@ var ui = {
             mainDisplay.toggleOption(agent_toggle);
         });
 
+        // Level of Detail (LOD) toggle
+        var lod_toggle = $('a#lod-toggle');
+        lod_toggle.click(function(ev) {
+            ev.preventDefault();
+            // store if using LOD
+            // consumed by the interative graph to turn on/off LOD 
+            if ($.cookie("lod")) {
+                $.cookie("lod", null, { path: '/' });
+            } else {
+                $.cookie("lod", true, { path: '/' });
+            }
+            // refresh page
+            $("a.active-link").click();
+            // update toggle button style
+            mainDisplay.toggleOption(lod_toggle);
+        });
+
 
 
         // Install event handlers
@@ -504,6 +521,12 @@ var ui = {
             $("a#agent-toggle").addClass("active-option");
         } else {
             $("a#agent-toggle").addClass("disabled-option");
+        }
+
+        if($.cookie("lod")) {
+            $("a#lod-toggle").addClass("active-option");
+        } else {
+            $("a#lod-toggle").addClass("disabled-option");
         }
     },
 
