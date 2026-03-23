@@ -481,7 +481,7 @@ export class DotGraphViz extends HTMLElement {
       this.initTransform = `translate(${translate.matrix.e} ${translate.matrix.f})`;
 
       // create zoom behavior
-      const zoomBehavior = zoom<SVGSVGElement, unknown>().scaleExtent([0.5, 3]).on("zoom", this.handleZoom)
+      const zoomBehavior = zoom<SVGSVGElement, unknown>().on("zoom", this.handleZoom)
       // register zoom behavior
       select(this.svg).call(zoomBehavior);
 
