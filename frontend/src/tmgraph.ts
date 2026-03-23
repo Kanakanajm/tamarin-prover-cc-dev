@@ -253,10 +253,12 @@ export class TamarinGraphRectBoxNode extends TamarinGraphNode {
     middleRow(afacts: JSONGraphNodeFact[]): DotNodeLabelCell {
         let txt = this.jgNode.jgnId + " : " + this.jgNode.jgnLabel;
         if (afacts.length > 0) {
+            txt += "[";
             txt += afacts.map(fact => {
                 const abbreviatedFact = abbreviate(this.nodeName(), fact, this.ctx);
                 return prettyPrintFact(abbreviatedFact);
             }).join(",\\n");
+            txt += "]";
         }
 
         return new DotNodeLabelCell(txt)
@@ -316,13 +318,16 @@ export class TamarinGraphRoundBoxNode extends TamarinGraphNode {
 
     label(): string {
         let lbl = this.jgNode.jgnId + " : " + this.jgNode.jgnLabel;
+
         if (this.jgNode.jgnMetadata) {
              // TODO(J): redundant with the one in TamarinGraphRectBoxNode
             if (this.jgNode.jgnMetadata.jgnActs.length > 0) {
+                lbl += "[";
                 lbl += this.jgNode.jgnMetadata.jgnActs.map(fact => {
                     const abbreviatedFact = abbreviate(this.nodeName(), fact, this.ctx);
                     return prettyPrintFact(abbreviatedFact);
                 }).join(",\\n");
+                lbl += "]";
             }
         }
         return lbl;
