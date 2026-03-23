@@ -92,13 +92,14 @@ function abbreviate(
     nodeName: string, 
     fact: JSONGraphNodeFact, 
     ctx: TamarinGraphBuildContext): JSONGraphNodeFact {
+    // TODO(J): fact is being mutated here, do we still need return?
     fact.jgnFactTerms = fact.jgnFactTerms.map(t => {
         // desc order
         for (const [index, abbrev] of ctx.abbreviations.sort((a, b) => depth(b.jgaTerm) - depth(a.jgaTerm)).entries()) {
             const result = replace(t, abbrev.jgaTerm, abbrev.jgaAbbrev);
             if (result.replaced) {
                 ctx.recordAbbrev(index, nodeName);
-                return result.term;
+                t = result.term;
             }
         }
         return t;
