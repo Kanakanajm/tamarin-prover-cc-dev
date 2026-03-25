@@ -141,6 +141,8 @@ export class DotGraphViz extends HTMLElement {
   initTransform?: string;
   zoomLevel: ZoomLevel = "ZoomIn"; // the graph always starts with most detailed zoom
 
+  isAbbreviationEnabled = false;
+
   // here stores nodes and edges that should be rendered based on current zoom level
   minimizableObjects: {
     edges: { [key: string]: MinimizableObject },
@@ -181,6 +183,7 @@ export class DotGraphViz extends HTMLElement {
   // }
 
   connectedCallback() {
+    this.isAbbreviationEnabled = document.cookie.indexOf("abbreviate") !== -1;
     this.dotSrc = this.getAttribute("dotsrc");
 
     if (this.dotSrc?.includes('interactive-graph')) // ***WARNING*** backend api's url changed after feature-interactive-graph PR
@@ -321,14 +324,17 @@ export class DotGraphViz extends HTMLElement {
     console.debug(jsonGraphs);
 
     for (const jsonGraph of jsonGraphs.graphs) {
-      const ctx = new TamarinGraphBuildContext(jsonGraph.jgAbbrevs);
+      const ctx = new TamarinGraphBuildContext(this.isAbbreviationEnabled ? jsonGraph.jgAbbrevs: []);
       const simplificationValue = getSimplificationFromCookie();
       
-      const tgraph = new TamarinGraph(jsonGraph, ctx, simplificationValue === -1 ? 0 : simplificationValue);
+      const tgraph = new TamarinGraph(jsonGraph, ctx, simplificationValue === -1 ? 2 : simplificationValue);
       console.debug(tgraph);
-      this.render(tgraph.dot()).then(() => {
-        this.renderLegend(ctx);
-      });
+        this.render(tgraph.dot()).then(() => {
+          if (this.isAbbreviationEnabled) {
+            this.renderLegend(ctx);
+          }
+        });
+
     }
 
   }
