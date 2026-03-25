@@ -326,9 +326,9 @@ export class TamarinGraphRoundBoxNode extends TamarinGraphNode {
                 lbl += "[";
                 lbl += this.jgNode.jgnMetadata.jgnActs.map(fact => {
                     const abbreviatedFact = abbreviate(this.nodeName(), fact, this.ctx);
-                    return prettyPrintFact(abbreviatedFact);
-                }).join(",\\n");
-                lbl += "]";
+                    return prettierJSONGraphNodeFact(abbreviatedFact);
+                }).join(",\\l");
+                lbl += "]\\l";
             }
         }
         return lbl;
