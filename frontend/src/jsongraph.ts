@@ -101,14 +101,14 @@ export interface JSONGraphs {
 /**
  * Whether term is a constant term
  */
-function isConst(t: JSONGraphNodeTerm): t is JSONGraphNodeTermConst {
+export function isJSONGraphNodeTermConst(t: JSONGraphNodeTerm): t is JSONGraphNodeTermConst {
     return "jgnConst" in t;
 }
 
 /**
  * Whether term is a function term
  */
-function isFunct(t: JSONGraphNodeTerm): t is JSONGraphNodeTermFunct {
+export function isJSONGraphNodeTermFunct(t: JSONGraphNodeTerm): t is JSONGraphNodeTermFunct {
     return "jgnFunct" in t;
 }
 
@@ -116,11 +116,11 @@ function isFunct(t: JSONGraphNodeTerm): t is JSONGraphNodeTermFunct {
  * Compare if two terms are the same
  */
 export function isEqual(t1: JSONGraphNodeTerm, t2: JSONGraphNodeTerm): boolean {
-    if (isConst(t1) && isConst(t2)) {
+    if (isJSONGraphNodeTermConst(t1) && isJSONGraphNodeTermConst(t2)) {
         return t1.jgnConst === t2.jgnConst;
     }
 
-    if (isFunct(t1) && isFunct(t2) &&
+    if (isJSONGraphNodeTermFunct(t1) && isJSONGraphNodeTermFunct(t2) &&
         t1.jgnFunct === t2.jgnFunct &&
         t1.jgnParams.length === t2.jgnParams.length) 
     {   
@@ -137,11 +137,11 @@ export function isEqual(t1: JSONGraphNodeTerm, t2: JSONGraphNodeTerm): boolean {
 }
 
 export function depth(t: JSONGraphNodeTerm): number {
-    if (isConst(t)) {
+    if (isJSONGraphNodeTermConst(t)) {
         return 1;
     }
 
-    if (isFunct(t)) {
+    if (isJSONGraphNodeTermFunct(t)) {
         return 1 + Math.max(...t.jgnParams.map(p => depth(p)));
     }
     return 0;
@@ -172,7 +172,7 @@ export function replace(
         return successReplaceResult(replaceBy);
     }
     else {
-        if (isFunct(term)) {
+        if (isJSONGraphNodeTermFunct(term)) {
             // new parameter list after find and replace
             const newParams: JSONGraphNodeTerm[] = [];
             let anyParamReplaced = false;
@@ -220,7 +220,7 @@ export function prettyPrintFact(f: JSONGraphNodeFact): string {
  * 
  */
 export function prettyPrintTerm(t: JSONGraphNodeTerm): string {
-    if (isFunct(t)) {
+    if (isJSONGraphNodeTermFunct(t)) {
         if (t.jgnFunct === "pair") {
             return `<${flattenPairFuncTerm(t).join(", ")}>`;
         }
@@ -228,7 +228,7 @@ export function prettyPrintTerm(t: JSONGraphNodeTerm): string {
             return `${t.jgnFunct}(${t.jgnParams?.map(n => prettyPrintTerm(n)).join()})`
         }
     }
-    else if (isConst(t)) {
+    else if (isJSONGraphNodeTermConst(t)) {
         return t.jgnConst;
     }
     else {
@@ -247,7 +247,7 @@ export function prettyPrintTerm(t: JSONGraphNodeTerm): string {
  * @returns a list of pretty printed parameters
  */
 export function flattenPairFuncTerm(t: JSONGraphNodeTerm): string[] {
-    if (isFunct(t) && t.jgnFunct === "pair") {
+    if (isJSONGraphNodeTermFunct(t) && t.jgnFunct === "pair") {
         return [...flattenPairFuncTerm(t.jgnParams[0]), ...flattenPairFuncTerm(t.jgnParams[1])]
     }
     return [prettyPrintTerm(t)];

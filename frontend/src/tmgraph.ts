@@ -16,6 +16,7 @@ import {
     replace
 } from "./jsongraph";
 import { DotNodeLabelCell, DotNodeLabelContainer } from "./vizhtml";
+import { prettierJSONGraphNodeFact } from "./prettier";
 
 interface NodeLocation {
     name: string;
@@ -245,7 +246,7 @@ export class TamarinGraphRectBoxNode extends TamarinGraphNode {
         return new DotNodeLabelContainer(
             facts.map(fact => {
                 const abbreviatedFact = abbreviate(this.nodeName(), fact, this.ctx);
-                return new DotNodeLabelCell(prettyPrintFact(abbreviatedFact), this.ctx.nodeLocation(fact.jgnFactId).port);
+                return new DotNodeLabelCell(prettierJSONGraphNodeFact(abbreviatedFact) + "\\l", this.ctx.nodeLocation(fact.jgnFactId).port);
             })
         );
     }
@@ -256,9 +257,9 @@ export class TamarinGraphRectBoxNode extends TamarinGraphNode {
             txt += "[";
             txt += afacts.map(fact => {
                 const abbreviatedFact = abbreviate(this.nodeName(), fact, this.ctx);
-                return prettyPrintFact(abbreviatedFact);
-            }).join(",\\n");
-            txt += "]";
+                return prettierJSONGraphNodeFact(abbreviatedFact);
+            }).join(",\\l");
+            txt += "]\\l";
         }
 
         return new DotNodeLabelCell(txt)
