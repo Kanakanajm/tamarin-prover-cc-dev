@@ -583,13 +583,11 @@ export class DotGraphViz extends HTMLElement {
 
     // scale the graph: attach the zoom transform after the initial translation
     select(this.svgg).attr("transform", event.transform.toString() + " " + this.initTransform);
-    if (this.lod) {
-      this.handleAbstractionLevel();
-    }
+    this.handleAbstractionLevel();
   };
 
   handleAbstractionLevel = () => {
-    if (!this.svgg || !this.svgg.getCTM())
+    if (!this.lod || !this.svgg || !this.svgg.getCTM())
       return;
 
     // screen_font_size = scale_zoom * scale_viewport * svg_font_size (default = 8px)
