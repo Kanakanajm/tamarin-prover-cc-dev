@@ -1,0 +1,254 @@
+export type JSONGraphNodeTermConst = {
+    jgnConst: string;
+};
+
+export type JSONGraphNodeTermFunct = {
+    jgnFunct: string;
+    jgnParams: JSONGraphNodeTerm[];
+    jgnShow: string;
+};
+
+export type JSONGraphNodeTerm = JSONGraphNodeTermConst | JSONGraphNodeTermFunct;
+
+export interface JsonGraphAbbrev {
+    jgaTerm: JSONGraphNodeTerm;
+    jgaAbbrev: JSONGraphNodeTerm;
+    jgaExpansion: JSONGraphNodeTerm;
+}
+
+export interface JSONGraphCluster {
+    jgcName: string;
+    jgcNodes: JSONGraphNode[];
+    jgcEdges: JSONGraphEdge[];
+}
+
+export interface JSONGraphEdge {
+    jgeSource: string;
+    jgeRelation: JSONGraphEdgeRelation ;
+    jgeTarget: string;
+    reason?: Reasons[] | null;
+}
+
+export type JSONGraphEdgeRelation =
+    "KFact"| 
+    "PersistentFact" |
+    "ProtoFact" |
+    "default" |
+    "LessAtoms" |
+    "unsolvedChain";
+    
+export type Reasons =   
+    "Fresh" |
+    "Formula" |
+    "InjectiveFacts" |
+    "NormalForm" |
+    "Adversary";
+
+export type JSONGraphNodeType =
+    "isIntruderRule"    |
+    "isDestrRule"       |
+    "isIEqualityRule"   |
+    "isConstrRule"      |
+    "isPubConstrRule"   |
+    "isNatConstrRule"   |
+    "isFreshRule"       |
+    "isIRecvRule"       |
+    "isISendRule"       |
+    "isCoerceRule"      |
+    "isProtocolRule"    |
+    "unknown rule type" |
+    "unsolvedActionAtom"|
+    "lastAtom"          |
+    "missingNodeConc"   |
+    "missingNodePrem";
+
+export interface JSONGraphNode {
+    jgnId: string;
+    jgnType: JSONGraphNodeType;
+    jgnLabel: string;
+    jgnMetadata?: JSONGraphNodeMetadata;
+}
+
+export interface JSONGraphNodeMetadata {
+    jgnActs: JSONGraphNodeFact[];
+    jgnConcs: JSONGraphNodeFact[];
+    jgnPrems: JSONGraphNodeFact[];
+}
+
+export interface JSONGraphNodeFact {
+    jgnFactId: string;
+    jgnFactTag: string;
+    jgnFactName: string;
+    jgnFactMult: string;
+    jgnFactTerms: JSONGraphNodeTerm[];
+    jgnFactShow: string;
+}
+
+export interface JSONGraph {
+    jgDirected: boolean;
+    jgType: string;
+    jgLabel: string;
+    jgNodes: JSONGraphNode[];
+    jgEdges: JSONGraphEdge[];
+    jgClusters: JSONGraphCluster[];
+    jgAbbrevs: JsonGraphAbbrev[];
+}
+
+export interface JSONGraphs {
+    graphs: JSONGraph[];
+}
+
+/**
+ * Whether term is a constant term
+ */
+export function isJSONGraphNodeTermConst(t: JSONGraphNodeTerm): t is JSONGraphNodeTermConst {
+    return "jgnConst" in t;
+}
+
+/**
+ * Whether term is a function term
+ */
+export function isJSONGraphNodeTermFunct(t: JSONGraphNodeTerm): t is JSONGraphNodeTermFunct {
+    return "jgnFunct" in t;
+}
+
+/**
+ * Compare if two terms are the same
+ */
+export function isEqual(t1: JSONGraphNodeTerm, t2: JSONGraphNodeTerm): boolean {
+    if (isJSONGraphNodeTermConst(t1) && isJSONGraphNodeTermConst(t2)) {
+        return t1.jgnConst === t2.jgnConst;
+    }
+
+    if (isJSONGraphNodeTermFunct(t1) && isJSONGraphNodeTermFunct(t2) &&
+        t1.jgnFunct === t2.jgnFunct &&
+        t1.jgnParams.length === t2.jgnParams.length) 
+    {   
+        // if two function terms have same function name and parameter length,
+        // compare their parameters piecewise
+        for (let i = 0; i < t1.jgnParams.length; i++) {
+            if (!isEqual(t1.jgnParams[i], t2.jgnParams[i])) {
+                return false;
+            }
+        }
+        return true;
+    }
+    return false;
+}
+
+export function depth(t: JSONGraphNodeTerm): number {
+    if (isJSONGraphNodeTermConst(t)) {
+        return 1;
+    }
+
+    if (isJSONGraphNodeTermFunct(t)) {
+        return 1 + Math.max(...t.jgnParams.map(p => depth(p)));
+    }
+    return 0;
+}
+
+export interface JSONGraphNodeTermReplaceResult {
+    replaced: boolean;
+    term: JSONGraphNodeTerm;
+}
+
+export function replace(
+    term: JSONGraphNodeTerm, 
+    find: JSONGraphNodeTerm, 
+    replaceBy: JSONGraphNodeTerm): 
+    JSONGraphNodeTermReplaceResult
+{
+    const successReplaceResult = 
+    (t: JSONGraphNodeTerm): JSONGraphNodeTermReplaceResult => ({
+        replaced: true, term: t
+    });
+
+    const failReplaceResult = 
+    (): JSONGraphNodeTermReplaceResult => ({
+        replaced: false, term
+    });
+
+    if (isEqual(term, find)) {
+        return successReplaceResult(replaceBy);
+    }
+    else {
+        if (isJSONGraphNodeTermFunct(term)) {
+            // new parameter list after find and replace
+            const newParams: JSONGraphNodeTerm[] = [];
+            let anyParamReplaced = false;
+
+            for (const param of term.jgnParams) {
+                const paramFindResult = replace(param, find, replaceBy);
+
+                // populate new parameter list with replaced result
+                newParams.push(paramFindResult.term);
+                anyParamReplaced = anyParamReplaced || paramFindResult.replaced;
+            }
+
+            if (anyParamReplaced) {
+                // construct new funct term
+                let newFunct: JSONGraphNodeTermFunct = {
+                    jgnFunct: term.jgnFunct,
+                    jgnParams: newParams,
+                    jgnShow: ""
+                };
+                
+                // jgnShow is seldom used but we populated it as well
+                newFunct.jgnShow = prettyPrintTerm(newFunct);
+
+                return successReplaceResult(newFunct);
+            }
+        }
+    }
+
+    // if const term is not equal to find term,
+    // it will terminate with failed find result
+    return failReplaceResult();
+}
+
+export function prettyPrintFact(f: JSONGraphNodeFact): string {
+    return `${f.jgnFactName}( ${f.jgnFactTerms.map(t => prettyPrintTerm(t)).join(", ")} )`;
+}
+
+/**
+ * Pretty print terms
+ * @remarks 
+ * Pair functions are shown as <flattened_parameters>, for details refer to the {@link flattenPairFuncTerm} function
+ * 
+ * @param t term
+ * @returns pretty printed term string
+ * 
+ */
+export function prettyPrintTerm(t: JSONGraphNodeTerm): string {
+    if (isJSONGraphNodeTermFunct(t)) {
+        if (t.jgnFunct === "pair") {
+            return `<${flattenPairFuncTerm(t).join(", ")}>`;
+        }
+        else {
+            return `${t.jgnFunct}(${t.jgnParams?.map(n => prettyPrintTerm(n)).join()})`
+        }
+    }
+    else if (isJSONGraphNodeTermConst(t)) {
+        return t.jgnConst;
+    }
+    else {
+        throw new Error("Unrecognized node");
+    }
+}
+
+/**
+ * Flatten pair function term into a list of its own pretty printed parameters
+ * @remark e.g. pair(a, b) will be flattened to [a, b] 
+ * 
+ * nested pairs i.e. pair(pair(a, b), pair(c, d)) as [a, b, c, d].
+ * 
+ * but pair(a, foo(pair(b, c), d)) only as [a, foo(<b, c>, d)].
+ * @param t the pair function term to be flattened
+ * @returns a list of pretty printed parameters
+ */
+export function flattenPairFuncTerm(t: JSONGraphNodeTerm): string[] {
+    if (isJSONGraphNodeTermFunct(t) && t.jgnFunct === "pair") {
+        return [...flattenPairFuncTerm(t.jgnParams[0]), ...flattenPairFuncTerm(t.jgnParams[1])]
+    }
+    return [prettyPrintTerm(t)];
+}

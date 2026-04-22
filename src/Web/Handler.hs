@@ -898,7 +898,7 @@ getInteractiveOverviewR idx path = withTheory idx ( \ti -> do
 getInteractiveDotGraphR :: TheoryIdx -> TheoryPath -> Handler Html
 getInteractiveDotGraphR idx path = withTheory idx ( \ti -> do
   renderF <- getUrlRender
-  let dotPath = T.unpack $ renderF (TheoryInteractiveGraphR idx path)
+  let dotPath = T.unpack $ renderF (TheoryGraphJsonR idx path)
   intdotLayout $ do 
       setTitle (toHtml $ "Theory: " ++ ti.theory._thyName)
       toWidget

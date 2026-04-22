@@ -1,10 +1,12 @@
-import { instance } from "@viz-js/viz";
+import { instance, Graph as DotGraph } from "@viz-js/viz";
 import { select, selectAll, zoom, create, D3ZoomEvent } from "d3";
 import { extendCurvePath, getCubicBezierCurve, getCubicBezierCurveGradients } from "../path";
 import { calculateCentroid, cross, direction, dot, Ellipse, intersect, inv, print2f, project, Ray, sub, traverse, Vec2 } from "../math";
 import { VizGraph } from "../viz";
 import { DiGraph, DiGraphConnections } from "../digraph";
 import './graph.css';
+import { JSONGraphs, prettyPrintTerm } from "../jsongraph";
+import { TamarinGraph, TamarinGraphBuildContext } from "../tmgraph";
 
 const ARROW_HEAD_WIDTH = 7;
 const ARROW_HEAD_HEIGHT = 10;
@@ -69,7 +71,7 @@ function getSimplificationFromCookie(): number {
   return s === -1 ? -1 : Number(document.cookie.charAt(s + k.length));
 }
 
-function constructDotSrcParamsFromCookie(): string {
+function constructJsonSrcParamsFromCookie(): string {
   const param = new URLSearchParams();
   if (document.cookie.indexOf("abbreviate=") === -1) {
     param.append("unabbreviate", "");
@@ -92,6 +94,9 @@ function constructDotSrcParamsFromCookie(): string {
 
 
 
+
+
+
 /** A dictionary where uses zoom level as key 
  * and the raw <g> element that contains how the object should be rendered on screen as value */
 type MinimizableObject = { [key in ZoomLevel]: SVGGElement | null };
@@ -103,10 +108,10 @@ export class DotGraphViz extends HTMLElement {
    * Passed in as attribute `dotsrc`  which can be either:
    * - A path to the dot file in the public folder during development
    * - A location that serves the dot file during production */
-  dotSrc?: string | null;
+  jsonSrc?: string | null;
 
-  dotSrcParams?: string;
-  checkDotSrcParamChangeInterval?: number;
+  jsonSrcParams?: string;
+  checkJsonSrcParamChangeInterval?: number;
 
   json?: VizGraph;
   graph?: DiGraph;
@@ -133,64 +138,11 @@ export class DotGraphViz extends HTMLElement {
   }
 
   resizeObserver?: ResizeObserver;
+  isAbbreviationEnabled = false;
 
 
   constructor() {
     super();
-  }
-
-  repositionAbbreviationTable() {
-    const svg = select(this).selectChild<SVGSVGElement>("svg");
-    const tbl = svg.selectChild<SVGGElement>("g.abbrev-table");
-    if (svg.empty() || tbl.empty()) {
-      return;
-    }
-    // skip null check due to the condition above
-    const svgEl = svg.node()!;
-    const tblEl = tbl.node()!;
-
-    // variables for transforming screen -> user coords
-    // scaling factor = screen/user coord i.e. how much screen pixel is covered by 1 unit in user coord
-    const scaleX = svgEl.clientWidth / svgEl.viewBox.baseVal.width;
-    const scaleY = svgEl.clientHeight / svgEl.viewBox.baseVal.height;
-    // default preserveAspectRatio is xMidYMid meet which forces uniform scaling
-    // see https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/preserveAspectRatio
-    const scaleUniform = Math.min(scaleX, scaleY);
-
-    // calculate viewbox translation
-    // mid point of the viewBox
-    const midXViewBox = svgEl.viewBox.baseVal.x + svgEl.viewBox.baseVal.width / 2;
-    const midYViewBox = svgEl.viewBox.baseVal.y + svgEl.viewBox.baseVal.height / 2;
-
-    // mid point of the viewBox after scaling (to screen/viewport)
-    const midXViewBoxScaled = midXViewBox * scaleUniform;
-    const midYViewBoxScaled = midYViewBox * scaleUniform;
-
-    // how much from the svg container's mid point to the viewBox's mid point
-    const translateX = svgEl.clientWidth / 2 - midXViewBoxScaled;
-    const translateY = svgEl.clientHeight / 2 - midYViewBoxScaled;
-
-    // target font size on screen: 12px, default legend text font size in svg: 8 px
-    // target_size = svg_size * scale_zoom * scale_viewport => scale_zoom = target_size / (svg_size * scale_viewport)
-    // scaleFont = 12 px / (8 px * scaleUniform)
-    const scaleFont = 1.5 / scaleUniform;
-
-    // bottom right corner of the svg container in user coordinate with 10px of margin
-    const x_br_screen = (svgEl.clientWidth - 10 - translateX) / scaleUniform;
-    const y_br_screen = (svgEl.clientHeight - 10 - translateY) / scaleUniform;
-        
-    // bounding box of abbreviation table
-    const abbrevTblElBBox = tblEl.getBBox();
-
-    // first translate the abbreviation box (top-left corner) to origin
-    // then scale the box so that the text has a font size equivalent on screen
-    // finally translate to the bottom right corner of the svg container with 10px of margin
-    // Note that translation applies to the top-left corner, 
-    // a translation from bottom-right to top-left is given by (box_width, box_height).
-    tbl
-      .attr("transform", `translate(${x_br_screen - abbrevTblElBBox.width * scaleFont} ${y_br_screen - abbrevTblElBBox.height * scaleFont}) ` 
-        + `scale(${scaleFont}) translate(${-abbrevTblElBBox.x} ${-abbrevTblElBBox.y})`
-      ); 
   }
 
   // attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null) {
@@ -204,43 +156,166 @@ export class DotGraphViz extends HTMLElement {
   // }
 
   connectedCallback() {
-    this.dotSrc = this.getAttribute("dotsrc");
-    this.dotSrc = this.dotSrc?.split("?").shift(); // element before ?
-    this.dotSrcParams = constructDotSrcParamsFromCookie();
-    this.dotSrc = this.dotSrc?.concat("?").concat(this.dotSrcParams);
-    if (!this.dotSrc || !this.dotSrc.trim().length) {
+    this.jsonSrc = this.getAttribute("dotsrc");
+    this.isAbbreviationEnabled = document.cookie.indexOf("abbreviate") !== -1;
+
+    if (!this.jsonSrc || !this.jsonSrc.trim().length) {
       console.error("[dot-graph-viz]: No dot graph source url provided.");
       return;
     }
 
+    if (import.meta.env.PROD) {
+      // for production, parameters are read from cookies and attached to the json source url 
+      const newJsonSrc = this.jsonSrc.split("?").shift(); // element before ?
+      this.jsonSrcParams = constructJsonSrcParamsFromCookie();
+      // TODO: need to handle invalid json source url better
+      // since source url is manipulated here and another check should be inplace, the check above is kind of redundant
+      this.jsonSrc = newJsonSrc!.concat("?").concat(this.jsonSrcParams);
+    }
+
     this.resizeObserver = new ResizeObserver(entries => {
       for (const _ of entries) {
-        this.repositionAbbreviationTable();
         this.handleAbstractionLevel();
       }
     });
 
     this.resizeObserver.observe(this);
 
-    this.fetchDotString(this.dotSrc)
-      .then((d) => {
-        this.render(d);
+    this.fetchJsonSource(this.jsonSrc)
+      .then((json) => {
+        this.renderJson(json);
       }).catch(err => {
-          console.error("[dot-graph-viz]: Error occurs during fetch\n", err);
-    });
+        console.error("[dot-graph-viz]: Error occurs during fetch\n", err);
+      });
   }
 
   disconnectedCallback() {
     this.resizeObserver?.disconnect();
   }
 
+  // Render the graph using JSON string
+  renderJson = (jsonGraphs: JSONGraphs) => {
+    console.debug("Received Json string: ");
+    console.debug(jsonGraphs);
+
+    for (const jsonGraph of jsonGraphs.graphs) {
+      const ctx = new TamarinGraphBuildContext(this.isAbbreviationEnabled ? jsonGraph.jgAbbrevs : []);
+      const simplificationValue = getSimplificationFromCookie();
+
+      const tgraph = new TamarinGraph(jsonGraph, ctx, simplificationValue === -1 ? 2 : simplificationValue);
+      console.debug(tgraph);
+      this.render(tgraph.dot()).then(() => {
+        if (this.isAbbreviationEnabled) {
+          this.renderLegend(ctx);
+        }
+      });
+
+    }
+
+
+  }
+
+  highlightAbbrevNodes = (nodeIds: string[]) => {
+    if (!this.graph || !this.svgg)
+      return;
+
+    // clear highlight
+    this.clearHighlight();
+
+    // add new highlight
+    this.svgg.classList.add("highlighted");
+
+    for (const n of nodeIds) {
+      const el = document.getElementById(n);
+      el?.classList.add("active");
+    }
+  }
+
+
+  /**
+  * Render legend box as a table on right bottom corner
+  * @remark
+  * If user click on the table row, it will highlight the clicked row and unhighlight the others.
+  * 
+  * Clicking on the other place of the document will unhighlight all row.
+  * 
+  */
+  renderLegend = (ctx: TamarinGraphBuildContext) => {
+    if (ctx.abbreviations.length > 0) {
+      const lcontainer = document.createElement("div");
+      lcontainer.setAttribute("class", "lgd-container");
+      const ltable = document.createElement("table");
+      lcontainer.appendChild(ltable);
+
+      // clear all selection lambda
+      const clearSelection = () => {
+        for (const r of ltable.children) {
+          r.setAttribute("class", "lgd-item");
+        }
+      }
+      ctx.abbreviations.forEach((abbrev, index) => {
+        const legend = document.createElement("tr");
+        legend.setAttribute("class", "lgd-item");
+
+        const highlightNodes = () => {
+          console.log(ctx.abbrevMap[index]);
+          this.highlightAbbrevNodes(Array.from(ctx.abbrevMap[index].values()));
+        }
+
+        // toggle highlight when user click on legend row
+        legend.addEventListener("click", function () {
+          // legend label highlight
+          if (this.classList.contains("active")) {
+            this.setAttribute("class", "lgd-item");
+          }
+          else {
+            clearSelection();
+            this.setAttribute("class", "lgd-item active");
+          }
+
+          // node highlight
+          highlightNodes();
+
+        });
+
+        // the three columns of the legend row
+        // the abbreviation
+        const legendAbbrev = document.createElement("td");
+        legendAbbrev.textContent = prettyPrintTerm(abbrev.jgaAbbrev);
+        legend.appendChild(legendAbbrev);
+
+        // the equal sign
+        const legendEq = document.createElement("td");
+        legendEq.textContent = "=";
+        legend.appendChild(legendEq);
+
+        // the expansion of the abbreviation
+        const legendExpand = document.createElement("td");
+        legendExpand.textContent = prettyPrintTerm(abbrev.jgaExpansion);
+        legend.appendChild(legendExpand);
+
+        ltable.appendChild(legend);
+      });
+
+      this.appendChild(lcontainer);
+      document.addEventListener("click", (ev) => {
+        if (ev.target instanceof Element && ev.target.tagName !== "TD" && ev.target.tagName !== "TR" && !ev.target.closest(this.getNodeSelector())) {
+          // clear legend highlight when clicking on other places on the document than <td> or <tr>
+          clearSelection();
+          this.clearHighlight();
+          this.highlightConnections = null;
+        }
+      })
+    }
+  }
+
   /** Render the graph as SVG given dot graph definition
    * 
    * @param dotString The dot graph definition (usually saved as a `*.dot` file and start with "digraph" in our case)
    */
-  render = (dotString: string) => {
-    if (this.checkDotSrcParamChangeInterval !== undefined) {
-      clearInterval(this.checkDotSrcParamChangeInterval);
+  render = (dotString: string | DotGraph) => new Promise<void>((resolve, reject) => {
+    if (this.checkJsonSrcParamChangeInterval !== undefined) {
+      clearInterval(this.checkJsonSrcParamChangeInterval);
     }
     instance().then(viz => {
       /* Resetting all the components */
@@ -293,7 +368,7 @@ export class DotGraphViz extends HTMLElement {
       }
 
       // register clear highlight event
-      document.addEventListener("click", (event: MouseEvent) => {
+      this.svgg?.addEventListener("click", (event: MouseEvent) => {
         const target = event.target as HTMLElement;
         // only clear when click on area that is not a node
         if (!target.closest(this.getNodeSelector()) && !target.closest("text.abbrev")) {
@@ -303,80 +378,55 @@ export class DotGraphViz extends HTMLElement {
         }
       });
 
-      // add abbreviation text click handler
-      if (this.graph.abbrev.elementId) {
-        const abbrevs = Object.keys(this.graph.abbrev.abbreviations);
-        const abbrevTbl = select(this.svgg)
-          .selectChild<SVGGElement>("#" + this.graph.abbrev.elementId)
-          .classed("abbrev-table", true);
+      if (!this.checkJsonSrcParamChangeInterval) {
+        this.checkJsonSrcParamChangeInterval = setInterval(() => {
+          const params = constructJsonSrcParamsFromCookie();
+          if (params !== this.jsonSrcParams) {
+            this.jsonSrc = this.getAttribute("dotsrc");
+            this.jsonSrc = this.jsonSrc?.split("?").shift(); // element before ?
+            this.jsonSrcParams = params;
+            this.jsonSrc = this.jsonSrc?.concat("?").concat(this.jsonSrcParams);
+            if (!this.jsonSrc || !this.jsonSrc.trim().length) {
+              console.error("[dot-graph-viz]: No dot graph source url provided.");
+              return;
+            }
 
-        abbrevTbl
-          .selectChildren<SVGTextElement, unknown>("text")
-          .filter(function () {
-            return abbrevs.includes(this.textContent || "");
-          })
-          .classed("abbrev", true)
-          .on("click", this.handleAbbreviationTextClick);
-
-        const abbrevTblEl = abbrevTbl.node()!;
-        const abbrevTblElBBox = abbrevTblEl.getBBox();
-
-        // inserting a rectangle box before the text 
-        abbrevTbl.insert("rect", "text")
-          .attr("width", abbrevTblElBBox.width)
-          .attr("height", abbrevTblElBBox.height)
-          .attr("x", abbrevTblElBBox.x)
-          .attr("y", abbrevTblElBBox.y)
-          .attr("fill", "white");
-
-        this.svg.appendChild(abbrevTblEl);
-
-        this.repositionAbbreviationTable();
-      }
-
-      this.checkDotSrcParamChangeInterval = setInterval(() => {
-        const params = constructDotSrcParamsFromCookie();
-        if (params !== this.dotSrcParams) {
-          this.dotSrc = this.getAttribute("dotsrc");
-          this.dotSrc = this.dotSrc?.split("?").shift(); // element before ?
-          this.dotSrcParams = params;
-          this.dotSrc = this.dotSrc?.concat("?").concat(this.dotSrcParams);
-          if (!this.dotSrc || !this.dotSrc.trim().length) {
-            console.error("[dot-graph-viz]: No dot graph source url provided.");
-            return;
-          }
-        
-          this.fetchDotString(this.dotSrc)
-            .then((d) => {
-              this.render(d);
-            }).catch(err => {
+            this.fetchJsonSource(this.jsonSrc)
+              .then((json) => {
+                this.renderJson(json);
+              }).catch(err => {
                 console.error("[dot-graph-viz]: Error occurs during fetch\n", err);
-          });
+              });
           }
         }, 1000);
+      }
 
-    });
-  } 
+      resolve();
+
+    })
+      .catch(reject);
+  });
 
 
   /*
     Fetchs the dot graph string  
   */
-  fetchDotString = (url: string): Promise<string> => {
-    const { promise, resolve, reject } = Promise.withResolvers<string>();
+  fetchJsonSource = (url: string): Promise<JSONGraphs> => {
+    const { promise, resolve, reject } = Promise.withResolvers<JSONGraphs>();
 
     fetch(url).then((res) => {
       if (!res.ok) {
-        reject("Failed to fetch dot graph definition.");
+        reject("Failed to fetch graph json source.");
         return;
       }
 
-      res.text().then((txt) => {
-        if (!txt.includes("digraph")) {
-          reject("Invalid dot graph string");
-          return;
+      res.text().then((str) => {
+        try {
+          const graphs = JSON.parse(str) as JSONGraphs;
+          resolve(graphs);
+        } catch {
+          reject("Graph source response is not a JSON");
         }
-        resolve(txt);
       }).catch(err => reject(err))
     }).catch(err => reject(err));
 
@@ -580,6 +630,7 @@ export class DotGraphViz extends HTMLElement {
 
     // scale the graph: attach the zoom transform after the initial translation
     select(this.svgg).attr("transform", event.transform.toString() + " " + this.initTransform);
+    console.log(event.transform.toString());
     this.handleAbstractionLevel();
   };
 
@@ -643,23 +694,6 @@ export class DotGraphViz extends HTMLElement {
 
     this.highlight();
   };
-
-  /*
-    When an abbreviation is clicked in the table, all graph nodes containing that abbreviation are highlighted. 
-  */
-  handleAbbreviationTextClick = (event: MouseEvent) => {
-
-    if (!this.graph)
-      return;
-    const el = event.target as HTMLElement;
-    const abbrev = el.textContent ?? "";
-    this.highlightConnections = {
-      nodes: this.graph.abbrev.abbreviations[abbrev],
-      edges: []
-    };
-
-    this.highlight();
-  }
 
   highlight = () => {
     if (!this.graph || !this.svgg || !this.highlightConnections || (this.highlightConnections.nodes.length === 0 && this.highlightConnections.edges.length === 0))
