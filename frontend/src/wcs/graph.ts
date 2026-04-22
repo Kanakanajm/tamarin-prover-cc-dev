@@ -381,7 +381,7 @@ export class DotGraphViz extends HTMLElement {
       if (!this.checkJsonSrcParamChangeInterval) {
         this.checkJsonSrcParamChangeInterval = setInterval(() => {
           const params = constructJsonSrcParamsFromCookie();
-          if (params !== this.jsonSrcParams) {
+          if (this.jsonSrcParams && params !== this.jsonSrcParams) {
             this.jsonSrc = this.getAttribute("dotsrc");
             this.jsonSrc = this.jsonSrc?.split("?").shift(); // element before ?
             this.jsonSrcParams = params;
