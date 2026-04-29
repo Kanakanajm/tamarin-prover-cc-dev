@@ -260,6 +260,7 @@ export class DotGraphViz extends HTMLElement {
         const highlightNodes = () => {
           console.log(ctx.abbrevMap[index]);
           this.highlightAbbrevNodes(Array.from(ctx.abbrevMap[index].values()));
+          this.highlightConnections = { nodes: Array.from(ctx.abbrevMap[index].values()).map(id => id.slice(4)), edges: [] };
         }
 
         // toggle highlight when user click on legend row
@@ -630,8 +631,7 @@ export class DotGraphViz extends HTMLElement {
 
     // scale the graph: attach the zoom transform after the initial translation
     select(this.svgg).attr("transform", event.transform.toString() + " " + this.initTransform);
-    console.log(event.transform.toString());
-    this.handleAbstractionLevel();
+     this.handleAbstractionLevel();
   };
 
   handleAbstractionLevel = () => {
@@ -696,7 +696,7 @@ export class DotGraphViz extends HTMLElement {
   };
 
   highlight = () => {
-    if (!this.graph || !this.svgg || !this.highlightConnections || (this.highlightConnections.nodes.length === 0 && this.highlightConnections.edges.length === 0))
+        if (!this.graph || !this.svgg || !this.highlightConnections || (this.highlightConnections.nodes.length === 0 && this.highlightConnections.edges.length === 0))
       return;
 
     // clear highlight
