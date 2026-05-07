@@ -581,6 +581,7 @@ mkYesodData "WebUI" [parseRoutes|
 /thy/trace/#Int/graph/*TheoryPath             TheoryGraphR            GET
 /thy/trace/#Int/interactive-graph-def/*TheoryPath             TheoryInteractiveGraphR            GET
 /thy/trace/#Int/json/*TheoryPath          TheoryGraphJsonR            GET
+/thy/trace/#Int/diff-json/*DiffTheoryPath   TheoryGraphJsonDiffR      GET
 /thy/trace/#Int/autoprove/#SolutionExtractor/#Int/#Bool/*TheoryPath AutoProverR             GET
 /thy/trace/#Int/autoproveAll/#SolutionExtractor/#Int/*TheoryPath AutoProverAllR             GET
 /thy/trace/#Int/next/#String/*TheoryPath      NextTheoryPathR         GET

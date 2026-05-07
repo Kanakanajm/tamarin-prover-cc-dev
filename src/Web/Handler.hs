@@ -30,6 +30,7 @@ module Web.Handler
   -- , getTheoryPathDR
   , getTheoryGraphR
   , getTheoryGraphJsonR
+  , getTheoryGraphJsonDiffR
   , getTheoryInteractiveGraphR
   , getTheoryGraphDiffR
   , getTheoryMirrorDiffR
@@ -909,7 +910,7 @@ getInteractiveDotGraphR idx path = withTheory idx ( \ti -> do
 getInteractiveDotGraphDiffR :: TheoryIdx -> DiffTheoryPath -> Handler Html
 getInteractiveDotGraphDiffR idx path = withDiffTheory idx (\ti -> do
   renderF <- getUrlRender
-  let dotPath = T.unpack $ renderF (TheoryInteractiveGraphDiffR idx path)
+  let dotPath = T.unpack $ renderF (TheoryGraphJsonDiffR idx path)
   intdotLayout $ do 
       setTitle (toHtml $ "DiffTheory: " ++ ti.theory._diffThyName)
       toWidget
@@ -1376,6 +1377,18 @@ getTheoryGraphJsonR idx path = withTheory idx (\ti -> do
     abbreviate <- isJust <$> lookupGetParam "abbrevInBackend"
     jsonStr <- liftIO $ traceExceptions "getTheoryGraphJsonR" $
         graphJsonThyPath (yesod.cacheDir) (\label system -> sequentsToJSONPretty graphOptions [(label, system)]) abbreviate (ti.theory) path
+
+    sendFile (fromString ".json") jsonStr)
+
+-- | Get the graph as JSON for theory and given path.
+getTheoryGraphJsonDiffR :: TheoryIdx -> DiffTheoryPath -> Handler ()
+getTheoryGraphJsonDiffR idx path = withDiffTheory idx (\ti -> do
+    yesod <- getYesod
+    (graphOptions, dotOptions) <- getOptions
+    -- abbreviate is False iff "abbreviate-in-backend" is not set
+    abbreviate <- isJust <$> lookupGetParam "abbrevInBackend"
+    jsonStr <- liftIO $ traceExceptions "getTheoryGraphJsonDiffR" $
+        diffGraphJsonThyPath (yesod.cacheDir) (\label system -> sequentsToJSONPretty graphOptions [(label, system)]) abbreviate (ti.theory) path False
 
     sendFile (fromString ".json") jsonStr)
 

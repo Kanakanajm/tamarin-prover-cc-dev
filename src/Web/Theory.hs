@@ -35,6 +35,7 @@ module Web.Theory
   , applyProverAtPathDiff
   , dotGraphString
   , graphJsonThyPath
+  , diffGraphJsonThyPath
   )
 where
 
@@ -1329,6 +1330,32 @@ graphJsonThyPath cacheDir_ showJsonGraphFunct abbreviate thy path = go path
             jsonGraph = showJsonGraphFunct ("Theory: " ++ thy._thyName ++ " Lemma: " ++ lemma) sys
         return jsonGraph
 
+    renderJson :: String -> IO FilePath
+    renderJson str = do
+      let graphPath = cacheDir_ </> getGraphPath OutJSON str
+          jsonPath = addExtension graphPath ("json")
+      createDirectoryIfMissing True (takeDirectory jsonPath)
+      writeFile jsonPath str
+      return jsonPath
+
+diffGraphJsonThyPath :: FilePath   -- cache dir   
+           -> (String -> System -> String) -- toJson funct
+           -> Bool -- if abbreviate
+           -> ClosedDiffTheory
+           -> DiffTheoryPath
+           -> Bool -- mirror
+           -> IO FilePath
+diffGraphJsonThyPath cacheDir_ showJsonGraphFunct abbreviate thy path mirror = go path
+  where 
+    go (DiffTheorySource s k d i j) = renderJson $ casesCode s k i j d
+    go _ = error "Unhandled theory path. This is a bug."
+
+    casesCode s k i j isdiff = 
+            showJsonGraphFunct ("Okay") (snd $ cases !! (i-1) !! (j-1))
+      where
+        cases = map (getDisj . (._cdCases)) (getDiffSource s isdiff k thy)
+
+  
     renderJson :: String -> IO FilePath
     renderJson str = do
       let graphPath = cacheDir_ </> getGraphPath OutJSON str
