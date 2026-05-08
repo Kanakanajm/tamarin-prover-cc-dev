@@ -244,9 +244,10 @@ export class DotGraphViz extends HTMLElement {
     if (ctx.abbreviations.length > 0) {
       const lcontainer = document.createElement("div");
       lcontainer.setAttribute("class", "lgd-container");
+      lcontainer.style.backgroundColor = "white";
       const ltable = document.createElement("table");
       lcontainer.appendChild(ltable);
-
+      
       // clear all selection lambda
       const clearSelection = () => {
         for (const r of ltable.children) {
