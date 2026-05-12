@@ -27,7 +27,7 @@ tamarin: frontend
 	stack setup
 	stack install
 
-# Versioned Tamarin: `make version` installs as tamarin-prover-<git describe>, appending _sha256-<hash> if dirty/broken
+# Versioned Tamarin: `make git-version` installs as tamarin-prover-<git describe>, appending _sha256-<hash> if dirty/broken
 # In practice, this gives a unique name to each installation, so that multiple versions can be installed at the same time and not interfere with each other. 
 # The naming is also designed to be unique even if versions are compiled with uncommitted changes. Such versions are marked "dirty" or broken by git describe. To ensure we still get unique versions without knowing the specific edits, we append in such cases the sha256 hash of the binary to the name. This should also imply that the version name uniquely determines the binary, so that we can use the name for caching or reproduction.
 # Caveat: The sha256 hash depends on the platform-dependent build, so for reproducibility across platforms one should use non-dirty commits.
