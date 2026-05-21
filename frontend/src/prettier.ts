@@ -102,7 +102,7 @@ function renderDoc(width: number, d: Doc): string {
                 col += doc.s.length;
                 break;
             case 'Line':
-                out.push('\\l' + ' '.repeat(indent));
+                out.push('\\l' + '\\ '.repeat(indent));
                 col = indent;
                 break;
             case 'Concat':
