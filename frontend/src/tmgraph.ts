@@ -250,7 +250,10 @@ export class TamarinGraphRectBoxNode extends TamarinGraphNode {
         return new DotNodeLabelContainer(
             facts.map(fact => {
                 const abbreviatedFact = abbreviate(this.nodeName(), fact, this.ctx);
-                return new DotNodeLabelCell(prettierJSONGraphNodeFact(abbreviatedFact) + "\\l", this.ctx.nodeLocation(fact.jgnFactId).port);
+                const pp = prettierJSONGraphNodeFact(abbreviatedFact);
+                // hard fix in case of flat version i.e. if no linebreak, do not add trailing \l
+                const label = pp.includes('\\l') ? pp + '\\l' : pp;
+                return new DotNodeLabelCell(label, this.ctx.nodeLocation(fact.jgnFactId).port);
             })
         );
     }
