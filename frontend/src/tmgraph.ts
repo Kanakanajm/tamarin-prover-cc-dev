@@ -34,6 +34,10 @@ export class TamarinGraphBuildContext {
 
     abbrevMap: Record<number, Set<string>>; // abbreviation index -> list of node name
 
+    // Node IDs that appear as the source of at least one edge. Populated by
+    // TamarinGraph before node construction so compact nodes can check it.
+    nodesWithOutgoingEdges: Set<string> = new Set();
+
     constructor(abbv: JsonGraphAbbrev[]) {
         this.nodeCount = 0;
         this.edgeCount = 0;
@@ -361,22 +365,67 @@ export class TamarinGraphLastAtomNode extends TamarinGraphRoundBoxNode {
     });
 }
 
+// Translate the long capitalised label from getRuleName (e.g. "Recv", "Constrc_aead")
+// to the short lowercase form used by prettyIntrRuleACInfo (e.g. "irecv", "cc_aead").
+function shortIntrRuleName(label: string): string {
+    switch (label) {
+        case 'Recv':        return 'irecv';
+        case 'Send':        return 'isend';
+        case 'Coerce':      return 'coerce';
+        case 'FreshConstr': return 'fresh';
+        case 'PubConstr':   return 'pub';
+        case 'NatConstr':   return 'nat';
+        case 'IEquality':   return 'iequality';
+    }
+    if (label.startsWith('Constr')) return label.slice('Constr'.length);
+    if (label.startsWith('Destr'))  return label.slice('Destr'.length);
+    return label;
+}
+
 export class TamarinGraphIntruderNode extends TamarinGraphRoundBoxNode {
-        constructor(jgNode: JSONGraphNode, ctx: TamarinGraphBuildContext) {
+    constructor(jgNode: JSONGraphNode, ctx: TamarinGraphBuildContext) {
         super(jgNode, ctx);
+    }
+
+    // Matches mkNode CompactBoringNodes branch in Dot.hs:294-304:
+    //   outgoingEdge → "<nodeId> : <shortName>"
+    //   otherwise    → "<nodeId> : <shortName>[acts]"  (ruleLabelM form)
+    label(): string {
+        const shortName = shortIntrRuleName(this.jgNode.jgnLabel);
+        const base = this.jgNode.jgnId + ' : ' + shortName;
+        const hasOutgoing = this.ctx.nodesWithOutgoingEdges.has(this.jgNode.jgnId);
+        if (hasOutgoing || !this.jgNode.jgnMetadata || this.jgNode.jgnMetadata.jgnActs.length === 0) {
+            return base;
+        }
+        const acts = this.jgNode.jgnMetadata.jgnActs.map(fact => {
+            const abbreviated = abbreviate(this.nodeName(), fact, this.ctx);
+            return prettierJSONGraphNodeFact(abbreviated);
+        }).join(',\\l');
+        return base + '[' + acts + ']\\l';
     }
 }
 
 export class TamarinGraphUnsolvedActionNode extends TamarinGraphRoundBoxNode {
     constructor(jgNode: JSONGraphNode, ctx: TamarinGraphBuildContext) {
         if (jgNode.jgnMetadata?.jgnActs.at(0)?.jgnFactTag === "KUFact") {
-            // KUFact
             super(jgNode, ctx, "gray");
-        }
-        else {
-            // otherwise
+        } else {
             super(jgNode, ctx, "darkblue");
         }
+    }
+
+    // Matches UnsolvedActionNode branch in Dot.hs:267-272:
+    //   lbl = fsep(punctuate comma facts) <-> "@" <-> nodeId
+    label(): string {
+        const nodeId = this.jgNode.jgnId;
+        if (this.jgNode.jgnMetadata && this.jgNode.jgnMetadata.jgnActs.length > 0) {
+            const acts = this.jgNode.jgnMetadata.jgnActs.map(fact => {
+                const abbreviated = abbreviate(this.nodeName(), fact, this.ctx);
+                return prettierJSONGraphNodeFact(abbreviated);
+            }).join(', ');
+            return acts + ' @ ' + nodeId;
+        }
+        return this.jgNode.jgnLabel + ' @ ' + nodeId;
     }
 }
 
@@ -563,6 +612,10 @@ export class TamarinGraph {
     constructor(jg:JSONGraph, ctx: TamarinGraphBuildContext, simplification: number) {
         this.jsonGraph = jg;
         this.ctx = ctx;
+
+        // Edge sources are "nodeId:portId"; extract node id so compact nodes can
+        // check whether they have outgoing edges (affects label format).
+        ctx.nodesWithOutgoingEdges = new Set(jg.jgEdges.map(e => e.jgeSource.split(':')[0]));
 
         this.nodes = this.jsonGraph.jgNodes.map(n => createTamarinGraphNode(n, ctx, simplification));
         
