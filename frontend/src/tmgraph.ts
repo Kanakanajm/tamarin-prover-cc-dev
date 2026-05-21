@@ -618,7 +618,14 @@ export class TamarinGraph {
 
         // Edge sources are "nodeId:portId"; extract node id so compact nodes can
         // check whether they have outgoing edges (affects label format).
-        ctx.nodesWithOutgoingEdges = new Set(jg.jgEdges.map(e => e.jgeSource.split(':')[0]));
+        // Only SystemEdges (fact-flow) count — LessAtoms/unsolvedChain are ordering edges
+        // and do not suppress action-fact display (matches hasOutgoingEdge in Dot.hs:277).
+        const systemEdgeRelations = new Set(['KFact', 'PersistentFact', 'ProtoFact', 'default']);
+        ctx.nodesWithOutgoingEdges = new Set(
+            jg.jgEdges
+                .filter(e => systemEdgeRelations.has(e.jgeRelation))
+                .map(e => e.jgeSource.split(':')[0])
+        );
 
         this.nodes = this.jsonGraph.jgNodes.map(n => createTamarinGraphNode(n, ctx, simplification));
         
