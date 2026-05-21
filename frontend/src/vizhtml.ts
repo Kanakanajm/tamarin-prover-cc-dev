@@ -198,5 +198,5 @@ export class DotNodeLabelCell extends DotNodeLabelBase {
         this.portName = portName;
         this.text = text;
     }
-    dot = () => `{${!this.portName ? ("<" + this.portName + "> ") : ""}${escapeHtml(this.text)}}`;
+    dot = () => `{${this.portName ? ("<" + this.portName + "> ") : ""}${escapeHtml(this.text)}}`;
 }

@@ -241,9 +241,15 @@ function isVaryingColor(c: TamarinGraphNodeColorMode): c is TamarinGraphNodeVary
 
 export class TamarinGraphRectBoxNode extends TamarinGraphNode {
     color: HsvColor;
+    middleRowPort: string;
     constructor(jgNode: JSONGraphNode, ctx: TamarinGraphBuildContext, colorMode: TamarinGraphNodeColorMode) {
         super(jgNode, ctx);
         this.color = isVaryingColor(colorMode) ? vary(color2hsv[colorMode.base]) : color2hsv[colorMode];
+        // Allocate a port for the middle (rule-label) row and re-register the node ID to point to it.
+        // This matches Haskell's dsNodes which resolves to the Nothing-keyed (action row) cell,
+        // so that LessAtoms edges anchor at the middle row rather than the whole node bounding box.
+        this.middleRowPort = `port${ctx.newPortId()}`;
+        ctx.recordNode(jgNode.jgnId, { name: this.nodeName(), port: this.middleRowPort });
     }
 
     factsToTblRow(facts: JSONGraphNodeFact[]): DotNodeLabelContainer {
@@ -269,7 +275,7 @@ export class TamarinGraphRectBoxNode extends TamarinGraphNode {
             txt += "]\\l";
         }
 
-        return new DotNodeLabelCell(txt)
+        return new DotNodeLabelCell(txt, this.middleRowPort)
     }
     
     label(): string {
@@ -465,12 +471,14 @@ export class TamarinGraphSolidEdge extends TamarinGraphEdge {
     }
 
     egdeAttributes(): Attributes {
+        const tailPort = this.ctx.nodeLocation(this.jgEdge.jgeSource)?.port;
+        const headPort = this.ctx.nodeLocation(this.jgEdge.jgeTarget)?.port;
         return {
             style: this.protoperStyle || "solid",
             weight: this.weight || "normal",
             color: this.edgeColor,
-            tailport: this.ctx.nodeLocation(this.jgEdge.jgeSource).port!,
-            headport: this.ctx.nodeLocation(this.jgEdge.jgeTarget).port!,
+            ...(tailPort ? { tailport: tailPort } : {}),
+            ...(headPort ? { headport: headPort } : {}),
         };
     }
 }
