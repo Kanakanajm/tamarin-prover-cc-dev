@@ -15,6 +15,8 @@ module Theory.Constraint.System.Dot (
   , DotOptions(..)
   , doNodeStyle
   , defaultDotOptions
+  , NodeColorMap
+  , nodeColorMap
   , SeDot
   ) where
 

@@ -26,7 +26,7 @@ export interface JSONGraphEdge {
     jgeSource: string;
     jgeRelation: JSONGraphEdgeRelation ;
     jgeTarget: string;
-    reason?: Reasons[] | null;
+    jgeColor: string;
 }
 
 export type JSONGraphEdgeRelation =
@@ -37,12 +37,6 @@ export type JSONGraphEdgeRelation =
     "LessAtoms" |
     "unsolvedChain";
     
-export type Reasons =   
-    "Fresh" |
-    "Formula" |
-    "InjectiveFacts" |
-    "NormalForm" |
-    "Adversary";
 
 export type JSONGraphNodeType =
     "isIntruderRule"    |
@@ -67,6 +61,7 @@ export interface JSONGraphNode {
     jgnType: JSONGraphNodeType;
     jgnLabel: string;
     jgnMetadata?: JSONGraphNodeMetadata;
+    jgnColor?: string;
 }
 
 export interface JSONGraphNodeMetadata {

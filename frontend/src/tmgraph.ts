@@ -198,41 +198,6 @@ type TamarinGraphNodeColor = "green" | "blue" | "purple";
 type TamarinGraphNodeColorMode = TamarinGraphNodeColor | TamarinGraphNodeVaryingColor;
 type TamarinGraphNodeVaryingColor = { base: TamarinGraphNodeColor; };
 
-interface HsvColor {
-    hue: number;
-    saturation: number;
-    value: number;
-}
-
-function toString(hsv: HsvColor) {
-    return `${hsv.hue.toFixed(3)},${hsv.saturation.toFixed(3)},${hsv.value.toFixed(3)}`
-}
-
-const color2hsv: Record<TamarinGraphNodeColor, HsvColor> = {
-    green: {
-        hue: 0.3,
-        saturation: 0.4,
-        value: 0.7
-    },
-    blue: {
-        hue: 0.6,
-        saturation: 0.4,
-        value: 0.7
-    },
-    purple: {
-        hue: 0.8,
-        saturation: 0.4,
-        value: 0.7
-    }
-};
-
-function vary(c: HsvColor, scale: number = 0.4): HsvColor {
-    return {
-        ...c,
-        value: c.value + (Math.random() - 0.5) * scale
-    };
-}
-
 function isVaryingColor(c: TamarinGraphNodeColorMode): c is TamarinGraphNodeVaryingColor {
     return typeof c === "object" && "base" in c;
 }
@@ -240,11 +205,11 @@ function isVaryingColor(c: TamarinGraphNodeColorMode): c is TamarinGraphNodeVary
 // MARK: Rect Node
 
 export class TamarinGraphRectBoxNode extends TamarinGraphNode {
-    color: HsvColor;
+    // color: HsvColor;
     middleRowPort: string;
-    constructor(jgNode: JSONGraphNode, ctx: TamarinGraphBuildContext, colorMode: TamarinGraphNodeColorMode) {
+    constructor(jgNode: JSONGraphNode, ctx: TamarinGraphBuildContext) {
         super(jgNode, ctx);
-        this.color = isVaryingColor(colorMode) ? vary(color2hsv[colorMode.base]) : color2hsv[colorMode];
+        // this.color = isVaryingColor(colorMode) ? vary(color2hsv[colorMode.base]) : color2hsv[colorMode];
         // Allocate a port for the middle (rule-label) row and re-register the node ID to point to it.
         // This matches Haskell's dsNodes which resolves to the Nothing-keyed (action row) cell,
         // so that LessAtoms edges anchor at the middle row rather than the whole node bounding box.
@@ -296,7 +261,7 @@ export class TamarinGraphRectBoxNode extends TamarinGraphNode {
     nodeAttributes = (): Attributes => ({
         shape: "record",
         style: "filled",
-        fillcolor: toString(this.color),
+        fillcolor: this.jgNode.jgnColor || "white",
         label: this.label()
     })
 }
@@ -305,19 +270,19 @@ export class TamarinGraphRectBoxNode extends TamarinGraphNode {
 
 export class TamarinGraphProtocolNode extends TamarinGraphRectBoxNode {
     constructor(jgNode: JSONGraphNode, ctx: TamarinGraphBuildContext) {
-        super(jgNode, ctx, { base: "green" });
+        super(jgNode, ctx);
     }
 }
 
 export class TamarinGraphFreshNode extends TamarinGraphRectBoxNode {
     constructor(jgNode: JSONGraphNode, ctx: TamarinGraphBuildContext) {
-        super(jgNode, ctx, "purple");
+        super(jgNode, ctx);
     }
 }
 
 export class TamarinGraphIntruderL0Node extends TamarinGraphRectBoxNode {
     constructor(jgNode: JSONGraphNode, ctx: TamarinGraphBuildContext) {
-        super(jgNode, ctx, { base: "blue" });
+        super(jgNode, ctx);
     }
 }
 
@@ -356,7 +321,7 @@ export class TamarinGraphRoundBoxNode extends TamarinGraphNode {
 
 export class TamarinGraphUnknownNode extends TamarinGraphRoundBoxNode {
     constructor(jgNode: JSONGraphNode, ctx: TamarinGraphBuildContext) {
-        super(jgNode, ctx, "red");
+        super(jgNode, ctx, );
     }
 
     nodeAttributes = () => ({
@@ -460,12 +425,12 @@ export class TamarinGraphMissingNode extends TamarinGraphNode {
 
 
 export class TamarinGraphSolidEdge extends TamarinGraphEdge {
-    edgeColor: string;
+    // edgeColor: string;
     weight: string;
     protoperStyle: string;
-    constructor(jgEdge: JSONGraphEdge, ctx: TamarinGraphBuildContext, edgeColor: string, weight?: string, protoperStyle?: string) {
+    constructor(jgEdge: JSONGraphEdge, ctx: TamarinGraphBuildContext, weight?: string, protoperStyle?: string) {
         super(jgEdge, ctx);
-        this.edgeColor = edgeColor;
+        // this.edgeColor = edgeColor;
         this.weight = weight!;
         this.protoperStyle = protoperStyle!;
     }
@@ -476,7 +441,7 @@ export class TamarinGraphSolidEdge extends TamarinGraphEdge {
         return {
             style: this.protoperStyle || "solid",
             weight: this.weight || "normal",
-            color: this.edgeColor,
+            color: this.jgEdge.jgeColor || "black",
             ...(tailPort ? { tailport: tailPort } : {}),
             ...(headPort ? { headport: headPort } : {}),
         };
@@ -484,32 +449,32 @@ export class TamarinGraphSolidEdge extends TamarinGraphEdge {
 }
 export class TamarinGraphProtoFactEdge extends TamarinGraphSolidEdge {
     constructor(jgEdge: JSONGraphEdge, ctx: TamarinGraphBuildContext) {
-        super(jgEdge, ctx, "black","10.0","bold");
+        super(jgEdge, ctx,"10.0","bold");
     }
 }
 export class TamarinGraphKFactEdge extends TamarinGraphSolidEdge {
     constructor(jgEdge: JSONGraphEdge, ctx: TamarinGraphBuildContext) {
-        super(jgEdge, ctx, "orangered2");
+        super(jgEdge, ctx);
     }
 }   
 export class TamarinGraphPersistentFactEdge extends TamarinGraphSolidEdge {
     constructor(jgEdge: JSONGraphEdge, ctx: TamarinGraphBuildContext) {
-        super(jgEdge, ctx, "gray50","10.0","bold");
+        super(jgEdge, ctx, "10.0","bold");
     }
 }
 export class TamarinGraphDottedEdge extends TamarinGraphEdge {
     
-    edgeColor: string;
+    // edgeColor: string;
 
-    constructor(jgEdge: JSONGraphEdge, ctx: TamarinGraphBuildContext, edgeColor: string) {
+    constructor(jgEdge: JSONGraphEdge, ctx: TamarinGraphBuildContext) {
         super(jgEdge, ctx);
-        this.edgeColor = edgeColor;
+        // this.edgeColor = edgeColor;
     }
 
    egdeAttributes(): Attributes {
         return {
             style: "dashed",
-            color: this.edgeColor,
+            color: this.jgEdge.jgeColor || "black",
             tailport: this.ctx.nodeLocation(this.jgEdge.jgeSource).port!,
             headport: this.ctx.nodeLocation(this.jgEdge.jgeTarget).port!,
         };
@@ -519,38 +484,21 @@ export class TamarinGraphDottedEdge extends TamarinGraphEdge {
 export class TamarinGraphLessAtomsEdge extends TamarinGraphDottedEdge {
     constructor(jgEdge: JSONGraphEdge, ctx: TamarinGraphBuildContext) {
 
-        if(jgEdge.reason?.includes("Fresh")) {
-        super(jgEdge, ctx, "blue3");
-        }
-        else if(jgEdge.reason?.includes("Formula")) {
-        super(jgEdge, ctx, "black");
-        }
-        else if(jgEdge.reason?.includes("InjectiveFacts")) {
-        super(jgEdge, ctx, "purple");
-        }
-        else if(jgEdge.reason?.includes("NormalForm")) {
-        super(jgEdge, ctx, "darkorange3");
-        }
-        else if(jgEdge.reason?.includes("Adversary")) {
-        super(jgEdge, ctx, "red");
-        }
-        else {
-        super(jgEdge, ctx, "black");
-        }
+        super(jgEdge, ctx, );
     }
     
 }
 
 export class TamarinGraphUnsolvedChainEdge extends TamarinGraphDottedEdge {
     constructor(jgEdge: JSONGraphEdge, ctx: TamarinGraphBuildContext) {
-        super(jgEdge, ctx, "green");
+        super(jgEdge, ctx);
     }
 }
 
 // default edge type if no specific relation is given
 export class TamarinGraphDefaultEdge extends TamarinGraphSolidEdge {
     constructor(jgEdge: JSONGraphEdge, ctx: TamarinGraphBuildContext) {
-        super(jgEdge, ctx, "gray30");
+        super(jgEdge, ctx);
     }
 }
 
@@ -561,17 +509,17 @@ function createTamarinGraphNode(
     ctx: TamarinGraphBuildContext,
     simplification: number): TamarinGraphNode {
     switch (jgNode.jgnType) {
-        case "isDestrRule":
-        case "isIEqualityRule":
-        case "isConstrRule":
-        case "isPubConstrRule":
-        case "isNatConstrRule":
-        case "isIRecvRule":
-        case "isISendRule":
-        case "isCoerceRule":
         case "isProtocolRule":
             return new TamarinGraphProtocolNode(jgNode, ctx);
         case "isIntruderRule":
+        case "isISendRule":
+        case "isIRecvRule":
+        case "isCoerceRule":
+        case "isIEqualityRule":
+        case "isDestrRule":
+        case "isConstrRule":
+        case "isNatConstrRule":
+        case "isPubConstrRule":
             if (simplification === 0) {
                 return new TamarinGraphIntruderL0Node(jgNode, ctx); // blue rect box
             }
