@@ -215,23 +215,6 @@ export class DotGraphViz extends HTMLElement {
 
   }
 
-  highlightAbbrevNodes = (nodeIds: string[]) => {
-    if (!this.graph || !this.svgg)
-      return;
-
-    // clear highlight
-    this.clearHighlight();
-
-    // add new highlight
-    this.svgg.classList.add("highlighted");
-
-    for (const n of nodeIds) {
-      const el = document.getElementById(n);
-      el?.classList.add("active");
-    }
-  }
-
-
   /**
   * Render legend box as a table on right bottom corner
   * @remark
@@ -259,9 +242,8 @@ export class DotGraphViz extends HTMLElement {
         legend.setAttribute("class", "lgd-item");
 
         const highlightNodes = () => {
-          console.log(ctx.abbrevMap[index]);
-          this.highlightAbbrevNodes(Array.from(ctx.abbrevMap[index].values()));
           this.highlightConnections = { nodes: Array.from(ctx.abbrevMap[index].values()).map(id => id.slice(4)), edges: [] };
+          this.highlight();
         }
 
         // toggle highlight when user click on legend row
@@ -449,6 +431,7 @@ export class DotGraphViz extends HTMLElement {
             "ZoomOut": null
           }
           this.minimizableObjects.nodes[nodeId]["ZoomIn"] = nodeEl;
+          select(nodeEl).on("click", this.handleNodeClick);
           this.minimizableObjects.nodes[nodeId]["ZoomOut"] = this.minimizeNode(nodeEl);
         }
       }
