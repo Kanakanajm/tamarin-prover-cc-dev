@@ -370,7 +370,7 @@ export class DotGraphViz extends HTMLElement {
       }
 
       // register clear highlight event
-      this.svgg?.addEventListener("click", (event: MouseEvent) => {
+      this.svg?.addEventListener("click", (event: MouseEvent) => {
         const target = event.target as HTMLElement;
         // only clear when click on area that is not a node
         if (!target.closest(this.getNodeSelector()) && !target.closest("text.abbrev")) {
