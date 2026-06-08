@@ -2,6 +2,10 @@ dot-graph-viz g.node.clickable {
   cursor: pointer;
 }
 
+dot-graph-viz g.node ellipse {
+  pointer-events: all;
+}
+
 dot-graph-viz g.highlighted>g.active {
   opacity: 1;
 }

@@ -319,12 +319,13 @@ export class DotGraphViz extends HTMLElement {
       // attach SVG to DOM
       this.append(this.svg);
 
-      // Allow selecting/copying text elements with the mouse 
-      selectAll("text")
-        .style("cursor", "text")
+      // Allow selecting/copying text elements with the mouse
+      selectAll<SVGTextElement, unknown>("text")
         .on("mousedown", function (event) {
           event.stopPropagation();
         })
+        .filter(function() { return !(this as SVGTextElement).closest("g.node"); })
+        .style("cursor", "text")
 
       this.svgg = select(this.svg).selectChild<SVGGElement>("g").node();
 
@@ -431,7 +432,7 @@ export class DotGraphViz extends HTMLElement {
             "ZoomOut": null
           }
           this.minimizableObjects.nodes[nodeId]["ZoomIn"] = nodeEl;
-          select(nodeEl).on("click", this.handleNodeClick);
+          select(nodeEl).classed("clickable", true).on("click", this.handleNodeClick);
           this.minimizableObjects.nodes[nodeId]["ZoomOut"] = this.minimizeNode(nodeEl);
         }
       }
