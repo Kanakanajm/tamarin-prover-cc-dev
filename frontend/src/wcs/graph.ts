@@ -227,11 +227,6 @@ export class DotGraphViz extends HTMLElement {
     if (ctx.abbreviations.length > 0) {
       const lcontainer = document.createElement("div");
       lcontainer.setAttribute("class", "lgd-container");
-      lcontainer.style.backgroundColor = "white";
-      lcontainer.style.width = "30%";
-      lcontainer.style.minWidth = "200px";
-      lcontainer.style.maxHeight = "30vh";
-      lcontainer.style.overflowY = "auto";
       const ltable = document.createElement("table");
       lcontainer.appendChild(ltable);
       
