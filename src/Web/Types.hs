@@ -600,6 +600,8 @@ mkYesodData "WebUI" [parseRoutes|
 -- /thy/equiv/#Int/debug/*DiffTheoryPath             TheoryPathDiffDR            GET
 /thy/equiv/#Int/graph/*DiffTheoryPath         TheoryGraphDiffR            GET
 /thy/equiv/#Int/mirror/*DiffTheoryPath        TheoryMirrorDiffR            GET
+/thy/equiv/#Int/json/*DiffTheoryPath          TheoryGraphJsonDiffR         GET
+/thy/equiv/#Int/json-mirror/*DiffTheoryPath   TheoryGraphJsonMirrorDiffR   GET
 /thy/equiv/#Int/interactive-graph-def/*DiffTheoryPath         TheoryInteractiveGraphDiffR            GET
 /thy/equiv/#Int/interactive-mirror-def/*DiffTheoryPath        TheoryInteractiveMirrorDiffR            GET
 /thy/equiv/#Int/intdot/mirror/*DiffTheoryPath             InteractiveDotGraphMirrorDiffR            GET

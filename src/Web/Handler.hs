@@ -31,6 +31,8 @@ module Web.Handler
   , getTheoryGraphR
   , getTheoryGraphJsonR
   , getTheoryInteractiveGraphR
+  , getTheoryGraphJsonDiffR
+  , getTheoryGraphJsonMirrorDiffR
   , getTheoryGraphDiffR
   , getTheoryMirrorDiffR
   , getTheoryInteractiveGraphDiffR
@@ -1378,6 +1380,23 @@ getTheoryGraphJsonR idx path = withTheory idx (\ti -> do
         graphJsonThyPath (yesod.cacheDir) (\label system -> sequentsToJSONPretty graphOptions [(label, system)]) abbreviate (ti.theory) path
 
     sendFile (fromString ".json") jsonStr)
+
+-- | Get the graph as JSON for diff theory and given path.
+getTheoryGraphJsonDiffR :: TheoryIdx -> DiffTheoryPath -> Handler ()
+getTheoryGraphJsonDiffR idx path = getTheoryGraphJsonDiffR' idx path False
+
+-- | Get the mirror graph as JSON for diff theory and given path.
+getTheoryGraphJsonMirrorDiffR :: TheoryIdx -> DiffTheoryPath -> Handler ()
+getTheoryGraphJsonMirrorDiffR idx path = getTheoryGraphJsonDiffR' idx path True
+
+getTheoryGraphJsonDiffR' :: TheoryIdx -> DiffTheoryPath -> Bool -> Handler ()
+getTheoryGraphJsonDiffR' idx path mirror = withDiffTheory idx $ \ti -> do
+    yesod <- getYesod
+    (graphOptions, dotOptions) <- getOptions
+    abbreviate <- isJust <$> lookupGetParam "abbrevInBackend"
+    jsonStr <- liftIO $ traceExceptions "getTheoryGraphJsonDiffR" $
+        graphJsonDiffThyPath (yesod.cacheDir) (\label system -> sequentsToJSONPretty graphOptions [(label, system)]) abbreviate (ti.theory) path mirror
+    sendFile (fromString ".json") jsonStr
 
 -- | Get rendered interactive dot graph for theory and given path.
 getTheoryInteractiveGraphR:: TheoryIdx -> TheoryPath -> Handler T.Text
