@@ -139,7 +139,7 @@ export abstract class TamarinGraphEdge {
     //         };
             
     //         return dotEdge;
-    dot = (): DotEdge => ({
+    dot = (): DotEdge | null => ({
         tail: this.ctx.nodeLocation(this.jgEdge.jgeSource).name,
         head: this.ctx.nodeLocation(this.jgEdge.jgeTarget).name,
         attributes: {
@@ -483,10 +483,22 @@ export class TamarinGraphDottedEdge extends TamarinGraphEdge {
 
 export class TamarinGraphLessAtomsEdge extends TamarinGraphDottedEdge {
     constructor(jgEdge: JSONGraphEdge, ctx: TamarinGraphBuildContext) {
-
-        super(jgEdge, ctx, );
+        super(jgEdge, ctx);
     }
-    
+
+    dot = (): DotEdge | null => {
+        const tailLoc = this.ctx.nodeLocation(this.jgEdge.jgeSource);
+        const headLoc = this.ctx.nodeLocation(this.jgEdge.jgeTarget);
+        if (!tailLoc || !headLoc) return null;
+        return {
+            tail: tailLoc.name,
+            head: headLoc.name,
+            attributes: {
+                id: `edge${this.ctx.newEdgeId()}`,
+                ...this.egdeAttributes()
+            }
+        };
+    }
 }
 
 export class TamarinGraphUnsolvedChainEdge extends TamarinGraphDottedEdge {
@@ -584,8 +596,10 @@ export class TamarinGraph {
         );
 
         this.nodes = this.jsonGraph.jgNodes.map(n => createTamarinGraphNode(n, ctx, simplification));
-        
-        this.edges = this.jsonGraph.jgEdges.map(e => createTamarinGraphEdge(e, ctx, simplification).dot());
+
+        this.edges = this.jsonGraph.jgEdges
+            .map(e => createTamarinGraphEdge(e, ctx, simplification).dot())
+            .filter((e): e is DotEdge => e !== null);
        
     }
 

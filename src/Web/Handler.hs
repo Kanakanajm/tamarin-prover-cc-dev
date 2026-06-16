@@ -911,8 +911,8 @@ getInteractiveDotGraphR idx path = withTheory idx ( \ti -> do
 getInteractiveDotGraphDiffR :: TheoryIdx -> DiffTheoryPath -> Handler Html
 getInteractiveDotGraphDiffR idx path = withDiffTheory idx (\ti -> do
   renderF <- getUrlRender
-  let dotPath = T.unpack $ renderF (TheoryInteractiveGraphDiffR idx path)
-  intdotLayout $ do 
+  let dotPath = T.unpack $ renderF (TheoryGraphJsonDiffR idx path)
+  intdotLayout $ do
       setTitle (toHtml $ "DiffTheory: " ++ ti.theory._diffThyName)
       toWidget
         [hamlet|
@@ -922,8 +922,8 @@ getInteractiveDotGraphDiffR idx path = withDiffTheory idx (\ti -> do
 getInteractiveDotGraphMirrorDiffR :: TheoryIdx -> DiffTheoryPath -> Handler Html
 getInteractiveDotGraphMirrorDiffR idx path = withDiffTheory idx (\ti -> do
   renderF <- getUrlRender
-  let dotPath = T.unpack $ renderF (TheoryInteractiveMirrorDiffR idx path)
-  intdotLayout $ do 
+  let dotPath = T.unpack $ renderF (TheoryGraphJsonMirrorDiffR idx path)
+  intdotLayout $ do
       setTitle (toHtml $ "DiffTheory: " ++ ti.theory._diffThyName)
       toWidget
         [hamlet|
