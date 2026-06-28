@@ -49,6 +49,7 @@ import           Theory.Constraint.System.Graph.Graph hiding (defaultOptions)
 import           Theory.Model
 import           Theory.Constraint.System.Dot (NodeColorMap, nodeColorMap)
 import Data.Color (rgbToHex)
+import Theory.Constraint.System.Dot (orderAbbreviationsForJSON)
 -------------------------------------------------------------------------------------------------
 -- Data structure for JSON graphs                                                              --
 -- adapted from https://github.com/jsongraph/json-graph-specification                          --
@@ -485,11 +486,11 @@ sequentToJSONGraph :: String     -- ^ label of graph
 sequentToJSONGraph label nodeColorMap = do
   graph <- getGraph
   let repr = get gRepr graph 
-      abbrevs = get gAbbreviations graph
   jnodes <- mapM (\n -> graphNodeToJSONGraphNode n nodeColorMap) (L.get grNodes repr)
   jedges <- mapM graphEdgeToJSONGraphEdge (L.get grEdges repr)
   jclusters <- mapM (\n -> graphClusterToJSONGraphCluster n nodeColorMap) (L.get grClusters repr)
-  jabbrevs <- mapM graphAbbrevtoJSONGraphAbbrev $ M.toList abbrevs
+  let orderedAbbrevs = orderAbbreviationsForJSON (get gAbbreviations graph)
+  jabbrevs <- mapM (\(term, expansion) -> graphAbbrevtoJSONGraphAbbrev (term, (term, expansion))) orderedAbbrevs
   return $ JSONGraph 
             { jgDirected = True
             , jgType  = "Tamarin prover constraint system"
